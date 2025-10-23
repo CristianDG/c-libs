@@ -1,19 +1,11 @@
-#include <libcdg/libcdg.h>
+#include "../libcdg/libcdg.h"
 
 // NOTE: temporary
+#include <windows.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <sys/stat.h>
-
-#if DG_OS_WINDOWS
-// FIXME: colocar em cima
-# include <windows.h>
-#elif DG_OS_LINUX
-// FIXME: remover
-void fopen_s(FILE **file, char *path, char *mode){
-  *file = fopen(file, path, mode);
-}
-#endif
 
 char *osso_fd_read_entire_file(DG_Arena *a, FILE *file, usize *size)
 {
@@ -132,7 +124,7 @@ void osso_lib_hot_reload(OSSO_Hot_Reloaded_Library *lib, char *path, char *tmp_l
 
     // FIXME: file_name_get + file_extension_get
     // FIXME: string builder implementation
-    sprintf_s(tmp_lib_path, 1024, "tmp%d_%s", (i32)lib->_swap, path);
+    snprintf(tmp_lib_path, 1024, "tmp%d_%s", (i32)lib->_swap, path);
     lib->_swap = !lib->_swap;
 
     osso_path_file_delete(tmp_lib_path);
