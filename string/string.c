@@ -87,7 +87,7 @@ usize string8_size(String8 str) {
   return (str.len * sizeof(u8));
 }
 
-String8 string_slice_copy(DG_Arena *a, String8 str)
+String8 string8_copy(DG_Arena *a, String8 str)
 {
   String8 result = { 0 };
   usize size = string8_size(str);
@@ -103,7 +103,7 @@ String8 string_slice_copy(DG_Arena *a, String8 str)
 
 char *string8_copy_to_cstring(DG_Arena *a, String8 str)
 {
-  return (char*) string_slice_copy(a, str).data;
+  return (char*) string8_copy(a, str).data;
 }
 
 void string8_to_string(String8 str, char *buffer, usize buffer_size) {
@@ -167,7 +167,7 @@ String_Node *string_list_push_fmt(DG_Arena *a, String_List *list, char *fmt, ...
 String_Node *string_list_push_string_slice(DG_Arena *a, String_List *list, String8 str)
 {
   String_Node *result = dg_arena_alloc(a, sizeof *result);
-  result->data = string_slice_copy(a, str);
+  result->data = string8_copy(a, str);
 
 
   return string_list_push_node(list, result);
