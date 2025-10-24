@@ -293,7 +293,7 @@ typedef u32 b32;
 // } Growing_Arena;
 
 #ifndef DG_MEMCPY
-void *memcpy(void *dst, const void *src, usize size)
+internal inline void *memcpy(void *dst, const void *src, usize size)
 {
   u8 *src_ptr = (u8 *)src;
   u8 *dst_ptr = (u8 *)dst;
