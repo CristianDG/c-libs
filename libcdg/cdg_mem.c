@@ -4,9 +4,9 @@
 #define DG_SCRATCH_ARENA_COUNT 2
 #endif
 
-thread_static DG_Arena *global_scratch[2] = {0};
+global_variable thread_static DG_Arena *global_scratch[2] = {0};
 
-void dg_scratch_memory_init(void)
+DG_SYMBOL void dg_scratch_memory_init(void)
 {
   // TODO: reservar no lugar de alocar
   u64 memory_size = 4 * MEGABYTE;
@@ -15,7 +15,7 @@ void dg_scratch_memory_init(void)
   dg_scratch_memory_init_buffer(memory, memory_size);
 }
 
-DG_Temp_Arena dg_scratch_get(DG_Arena *conflict)
+DG_SYMBOL DG_Temp_Arena dg_scratch_get(DG_Arena *conflict)
 {
   if (!global_scratch[0]) {
     dg_scratch_memory_init();
@@ -41,7 +41,7 @@ DG_Temp_Arena dg_scratch_get(DG_Arena *conflict)
   return dg_temp_arena_begin(result);
 }
 
-void dg_scratch_memory_init_buffer(u8 *data, usize size)
+DG_SYMBOL void dg_scratch_memory_init_buffer(u8 *data, usize size)
 {
   DG_ASSERT(data != 0);
   DG_ASSERT(size > sizeof(global_scratch));
@@ -63,7 +63,7 @@ void dg_scratch_memory_init_buffer(u8 *data, usize size)
 
 
 
-DG_Arena *dg_arena_init_buffer(void *data, size_t size)
+DG_SYMBOL DG_Arena *dg_arena_init_buffer(void *data, size_t size)
 {
   DG_Arena *arena = data;
   DG_MEMSET(arena, 0, sizeof *arena);
@@ -98,7 +98,7 @@ internal uintptr_t dg_align_forward(uintptr_t ptr, size_t alignment)
   return p;
 }
 
-void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment)
+DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment)
 {
   uintptr curr_ptr = (uintptr)arena->data + (uintptr)arena->cursor;
   uintptr offset = dg_align_forward(curr_ptr, alignment);
@@ -116,7 +116,7 @@ void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment)
   return DG_MEMSET(ptr, 0, size);
 }
 
-void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size) {
+DG_SYMBOL void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size) {
   void *result = 0;
   if (old_ptr == a->last_allocation) {
     usize old_size = (uintptr)old_ptr - (uintptr)a->data + a->cursor;
@@ -135,7 +135,7 @@ void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size) {
 }
 
 // TODO: olhar https://youtu.be/443UNeGrFoM?si=DBJXmKB_z8W8Yrrf&t=3074
-void *dg_tracking_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment, char *file, i32 line)
+DG_SYMBOL void *dg_tracking_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment, char *file, i32 line)
 {
   // TODO: registrar onde foram todas as alocações
   void *ptr = dg_arena_alloc_impl(arena, size, alignment);
@@ -145,7 +145,7 @@ void *dg_tracking_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignmen
   return ptr;
 }
 
-void *dg_arena_realloc_impl(DG_Arena *arena, void *ptr, size_t new_size, size_t alignment)
+DG_SYMBOL void *dg_arena_realloc_impl(DG_Arena *arena, void *ptr, size_t new_size, size_t alignment)
 {
   void *result = 0;
   if (ptr == arena->last_allocation) {
@@ -169,7 +169,7 @@ void *dg_arena_realloc_impl(DG_Arena *arena, void *ptr, size_t new_size, size_t 
   return result;
 }
 
-DG_Temp_Arena dg_temp_arena_begin(DG_Arena *a)
+DG_SYMBOL DG_Temp_Arena dg_temp_arena_begin(DG_Arena *a)
 {
   return (DG_Temp_Arena) {
     .arena = a,
@@ -178,7 +178,7 @@ DG_Temp_Arena dg_temp_arena_begin(DG_Arena *a)
   };
 }
 
-void dg_temp_arena_end(DG_Temp_Arena tmp_mem)
+DG_SYMBOL void dg_temp_arena_end(DG_Temp_Arena tmp_mem)
 {
   tmp_mem.arena->cursor = tmp_mem.cursor;
   tmp_mem.arena->last_allocation = tmp_mem.last_allocation;
@@ -186,7 +186,7 @@ void dg_temp_arena_end(DG_Temp_Arena tmp_mem)
 }
 
 // TODO:
-void dg_arena_clear(DG_Arena *arena)
+DG_SYMBOL void dg_arena_clear(DG_Arena *arena)
 {
   arena->cursor = 0;
 }
