@@ -3,8 +3,7 @@
 
 // types.h {{{
 
-// wip: context cracking {{{
-
+// context cracking {{{
 
 #if defined(__clang__) // compiler switch
 
@@ -120,7 +119,6 @@
 
 // }}}
 
-
 #if __STDC_VERSION__ < 199901L /* older than c99 */
 # ifndef inline
 #  define inline
@@ -133,15 +131,9 @@
 # define thread_static __thread
 #endif
 
-
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
-/* TODO:
- * - context cracking
- * - defer macro
- */
 
 typedef uint8_t  u8;
 typedef uint16_t u16;
@@ -205,12 +197,10 @@ typedef u32 b32;
 #define DG_BIT_MASK_HAS(mask, flag)     (((mask) & (flag)) == (flag))
 
 #if !defined(DG_STATIC_ASSERT) // {{{
-
-#define DG_STATIC_ASSERT(...) DG_STATIC_ASSERT_IMPL(DG_NARGS(__VA_ARGS__), __VA_ARGS__)
-#define DG_STATIC_ASSERT_IMPL(n, ...) GLUE(DG_STATIC_ASSERT_, n)(__VA_ARGS__)
-#define DG_STATIC_ASSERT_1(expr) _Static_assert(expr, "")
-#define DG_STATIC_ASSERT_2(expr, msg) _Static_assert(expr, msg)
-
+# define DG_STATIC_ASSERT(...) DG_STATIC_ASSERT_IMPL(DG_NARGS(__VA_ARGS__), __VA_ARGS__)
+# define DG_STATIC_ASSERT_IMPL(n, ...) GLUE(DG_STATIC_ASSERT_, n)(__VA_ARGS__)
+# define DG_STATIC_ASSERT_1(expr) _Static_assert(expr, "")
+# define DG_STATIC_ASSERT_2(expr, msg) _Static_assert(expr, msg)
 #endif // }}} DG_STATIC_ASSERT
 
 // NOTE: vou deixar sem as parenteses para ver se não tenho erros básicos de macros
@@ -256,22 +246,13 @@ typedef u32 b32;
 # define DG_LOG(...) fprintf(stdout, __VA_ARGS__)
 #endif // DG_LOG
 
-#ifndef DG_CRASH // {{{
-#if defined(DG_PLATFORM_WASM)
-#define DG_CRASH() __builtin_trap()
-#else
-#define DG_CRASH() (*((volatile int *)0) = 69)
-#endif
-#endif // }}} DG_CRASH
-
-#if !defined(DG_ASSERT_EXPR) // {{{
-// NOTE: esse assert funciona como expressão: bool assert(bool)
-#define DG_ASSERT_EXPR(exp) ( \
-  (exp) \
-    ? (true) \
-    : (DG_LOG_ERROR("%s:%d : assertion '%s' failed\n", __FILE__, __LINE__, STR(exp)), DG_CRASH(), false) \
-)
-#endif // DG_ASSERT_EXPR }}}
+#ifndef DG_CRASH
+# if defined(DG_PLATFORM_WASM)
+#  define DG_CRASH() __builtin_trap()
+# else
+#  define DG_CRASH() (*((volatile int *)0) = 69)
+# endif
+#endif // DG_CRASH
 
 #if defined(DG_NO_ASSERT)
 # define DG_ASSERT_MSG_PASS_LOC(exp, msg, file, line)
@@ -290,8 +271,6 @@ typedef u32 b32;
 #  define DG_ASSERT(exp) DG_ASSERT_MSG(exp, STR(exp))
 # endif // }}}
 #endif
-
-
 
 #define DG_WIP \
   DG_ASSERT_MSG(false, "not implemented")
