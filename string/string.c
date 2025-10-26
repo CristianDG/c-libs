@@ -64,7 +64,7 @@ String8 string8_from_cstring(char *data, u32 len) {
 }
 
 #define string_ensure_string_literal(str) ("" str "")
-#define string8_literal(str) string8_from_cstring(string_ensure_string_literal(str), sizeof(str) - 1)
+#define string8_literal(str) string8_from_cstring(string_ensure_string_literal(str), (sizeof (str)) - 1)
 
 String8 string8_sub_slice(String8 str, u32 low, u32 high) {
 
