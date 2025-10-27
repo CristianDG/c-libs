@@ -172,10 +172,12 @@ typedef u32 b32;
 # define DG_EXTERN __attribute__((visibility("default")))
 #endif
 
-#if defined(DG_SYMBOL) || defined(DG_EXPORT_FUNCTIONS) || defined(DG_IMPORT_FUNCTIONS)
+#if defined(DG_UNITY_BUILD)
+# define DG_SYMBOL internal
+#elif defined(DG_EXPORT_FUNCTIONS) || defined(DG_IMPORT_FUNCTIONS)
 # define DG_SYMBOL DG_EXTERN
 #else
-# define DG_SYMBOL internal
+# define DG_SYMBOL
 #endif
 
 #define DG_STATEMENT(x) do { x } while (0)
