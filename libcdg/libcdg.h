@@ -62,7 +62,7 @@
 #endif
 
 #if DG_ARCH_ARM32 || DG_ARCH_ARM64 || DG_ARCH_X64 || DG_ARCH_X86
-# define ARCH_LITTLE_ENDIAN 1
+# define DG_ARCH_LITTLE_ENDIAN 1
 #else
 # error "Endianness of this architecture not understood by context cracker."
 #endif
@@ -129,6 +129,9 @@
 # define thread_static __declspec(thread)
 #elif DG_COMPILER_CLANG || DG_COMPILER_GCC
 # define thread_static __thread
+#else
+// TODO: make simple to know when this doesn't apply
+# define thread_static
 #endif
 
 #include <stdint.h>
@@ -206,9 +209,9 @@ typedef u32 b32;
 #endif // }}} DG_STATIC_ASSERT
 
 // NOTE: vou deixar sem as parenteses para ver se não tenho erros básicos de macros
-#define ABS(a)   (a > 0 ? a : -a)
-#define MAX(a,b) (a > b ? a :  b)
-#define MIN(a,b) (a < b ? a :  b)
+#define ABS(a)   ((a) > (0) ? a : -a)
+#define MAX(a,b) ((a) > (b) ? a :  b)
+#define MIN(a,b) ((a) < (b) ? a :  b)
 #define CLAMP(val, min, max) (val < min ? min : (val > max ? max : val))
 
 #define CLAMP_TOP MIN
@@ -233,10 +236,8 @@ typedef u32 b32;
   (void)0; \
 })
 
-#define DG_BREAKPOINT_IMPL(line) \
-  volatile usize GLUE(_dg_breakpoint_val_, line) = 0; GLUE(_dg_breakpoint_val_, line) += 0;
-
-#define DG_BREAKPOINT DG_BREAKPOINT_IMPL(__LINE__)
+#define DG_BREAKPOINT \
+  volatile usize GLUE(_dg_breakpoint_val_, __LINE__) = 0; GLUE(_dg_breakpoint_val_, __LINE__) += 0;
 
 #ifndef DG_LOG_ERROR
 # include <stdio.h>

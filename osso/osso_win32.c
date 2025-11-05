@@ -47,11 +47,6 @@ char *osso_path_read_entire_file(DG_Arena *a, char *path, usize *size)
   return result;
 }
 
-// TODO: make multi platform
-typedef struct {
-  time_t time;
-} OSSO_Time;
-
 void osso_path_time_get(char *path, OSSO_Time *created, OSSO_Time *modified, OSSO_Time *accessed)
 {
   struct stat s;
@@ -80,12 +75,6 @@ bool osso_time_later_than(OSSO_Time a, OSSO_Time b)
 {
   return a.time > b.time;
 }
-
-typedef struct {
-  void *handle;
-  OSSO_Time time_since_last_load;
-  bool _swap;
-} OSSO_Hot_Reloaded_Library;
 
 void *osso_platform_specific_lib_load(char *path);
 void osso_platform_specific_lib_unload(void *handle);
@@ -142,7 +131,7 @@ void osso_lib_hot_reload(OSSO_Hot_Reloaded_Library *lib, char *path, char *tmp_l
       goto r;
     }
 
-    ok = true;
+    ok = !first_load;
     new = false;
     goto r;
 
