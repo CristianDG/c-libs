@@ -5,67 +5,102 @@
 
 // context cracking {{{
 
-#if defined(__clang__) // compiler switch
+#if !defined(DG_CONTEXT_UNKNOWN) || !DG_CONTEXT_UNKNOWN
 
-# define DG_COMPILER_CLANG 1
+# if defined(__clang__) // compiler switch
 
-# if defined(_WIN32)
-#  define DG_OS_WINDOWS 1
-# elif defined(__gnu_linux__) || defined(__linux__)
-#  define DG_OS_LINUX 1
-# else
-#  error "This Compiler/OS combination is not supported"
+#  define DG_COMPILER_CLANG 1
+
+#  if defined(_WIN32)
+#   define DG_OS_WINDOWS 1
+#  elif defined(__gnu_linux__) || defined(__linux__)
+#   define DG_OS_LINUX 1
+#  else
+#   error "This Compiler/OS combination is not supported"
+#  endif
+
+#  if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64)
+#   define DG_ARCH_X64 1
+#  elif defined(i386) || defined(__i386) || defined(__i386__)
+#   define DG_ARCH_X86 1
+#  elif defined(__aarch64__)
+#   define DG_ARCH_ARM64 1
+#  elif defined(__arm__)
+#   define DG_ARCH_ARM32 1
+#  else
+#   error "Architecture not supported."
+#  endif
+
+# elif defined(__GNUC__) || defined(__GNUG__) // compiler switch
+
+#  define DG_COMPILER_GCC 0
+
+#  if defined(__gnu_linux__) || defined(__linux__)
+#   define DG_OS_LINUX 1
+#  else
+#   error "This Compiler/OS combination is not supported"
+#  endif
+
+#  if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64)
+#   define DG_ARCH_X64 1
+#  elif defined(i386) || defined(__i386) || defined(__i386__)
+#   define DG_ARCH_X86 1
+#  elif defined(__aarch64__)
+#   define DG_ARCH_ARM64 1
+#  elif defined(__arm__)
+#   define DG_ARCH_ARM32 1
+#  else
+#   error "Architecture not supported."
+#  endif
+
+# elif defined(__TINYC__)
+# define DG_COMPILER_TINYC 1
+
+#  if defined(_WIN32)
+#   define DG_OS_WINDOWS 1
+#  elif defined(__gnu_linux__) || defined(__linux__)
+#   define DG_OS_LINUX 1
+#  else
+#   error "This Compiler/OS combination is not supported"
+#  endif
+
+#  if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64)
+#   define DG_ARCH_X64 1
+#  elif defined(i386) || defined(__i386) || defined(__i386__)
+#   define DG_ARCH_X86 1
+#  elif defined(__aarch64__)
+#   define DG_ARCH_ARM64 1
+#  elif defined(__arm__)
+#   define DG_ARCH_ARM32 1
+#  else
+#   error "Architecture not supported."
+#  endif
+
+
+# else // compiler switch
+#  error "Compiler not supported."
+# endif // compiler switch
+
+# if defined(DG_ARCH_X64)
+#  define DG_ARCH_64BIT 1
+# elif defined(DG_ARCH_X86)
+#  define DG_ARCH_32BIT 1
 # endif
 
-# if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64)
-#  define DG_ARCH_X64 1
-# elif defined(i386) || defined(__i386) || defined(__i386__)
-#  define DG_ARCH_X86 1
-# elif defined(__aarch64__)
-#  define DG_ARCH_ARM64 1
-# elif defined(__arm__)
-#  define DG_ARCH_ARM32 1
+# if DG_ARCH_ARM32 || DG_ARCH_ARM64 || DG_ARCH_X64 || DG_ARCH_X86
+#  define DG_ARCH_LITTLE_ENDIAN 1
 # else
-#  error "Architecture not supported."
+#  error "Endianness of this architecture not understood by context cracker."
 # endif
 
-#elif defined(__GNUC__) || defined(__GNUG__) // compiler switch
-
-# define DG_COMPILER_GCC 0
-
-# if defined(__gnu_linux__) || defined(__linux__)
-#  define DG_OS_LINUX 1
-# else
-#  error "This Compiler/OS combination is not supported"
-# endif
-
-# if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64)
-#  define DG_ARCH_X64 1
-# elif defined(i386) || defined(__i386) || defined(__i386__)
-#  define DG_ARCH_X86 1
-# elif defined(__aarch64__)
-#  define DG_ARCH_ARM64 1
-# elif defined(__arm__)
-#  define DG_ARCH_ARM32 1
-# else
-#  error "Architecture not supported."
-# endif
-
-#else // compiler switch
-# error "Compiler not supported."
-#endif // compiler switch
-
-#if defined(DG_ARCH_X64)
-# define DG_ARCH_64BIT 1
-#elif defined(DG_ARCH_X86)
-# define DG_ARCH_32BIT 1
-#endif
-
-#if DG_ARCH_ARM32 || DG_ARCH_ARM64 || DG_ARCH_X64 || DG_ARCH_X86
-# define DG_ARCH_LITTLE_ENDIAN 1
 #else
-# error "Endianness of this architecture not understood by context cracker."
+
+# define DG_ARCH_UNKNOWN 1
+# define DG_OS_UNKNOWN 1
+# define DG_COMPILER_UNKNOWN 1
+
 #endif
+
 
 #if defined(__cplusplus)
 # define DG_LANG_CPP 1
@@ -74,6 +109,15 @@
 #endif
 
 // clear undefined variables
+#if !defined(DG_ARCH_UNKNOWN)
+#define DG_ARCH_UNKNOWN 0
+#endif
+#if !defined(DG_OS_UNKNOWN)
+#define DG_OS_UNKNOWN 0
+#endif
+#if !defined(DG_COMPILER_UNKNOWN)
+#define DG_COMPILER_UNKNOWN 0
+#endif
 #if !defined(DG_ARCH_32BIT)
 # define DG_ARCH_32BIT 0
 #endif
@@ -97,6 +141,9 @@
 #endif
 #if !defined(DG_COMPILER_GCC)
 # define DG_COMPILER_GCC 0
+#endif
+#if !defined(DG_COMPILER_TINYC)
+# define DG_COMPILER_TINYC 0
 #endif
 #if !defined(DG_COMPILER_CLANG)
 # define DG_COMPILER_CLANG 0
