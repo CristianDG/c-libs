@@ -7,6 +7,13 @@
 
 #include <sys/stat.h>
 
+#if DG_COMPILER_TINYC
+// NOTE: tcc doesn't know this function because is from the c11 standard
+errno_t fopen_s(FILE *restrict *restrict streamptr,
+                 const char *restrict filename,
+                 const char *restrict mode );
+#endif
+
 char *osso_fd_read_entire_file(DG_Arena *a, FILE *file, usize *size)
 {
   char *result = 0;
