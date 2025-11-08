@@ -348,6 +348,7 @@ internal inline void *memcpy(void *dst, const void *src, usize size)
   for (i32 i = 0; i < size; ++i){
     *dst_ptr = *src_ptr;
     src_ptr+=1;
+    dst_ptr+=1;
   }
 
   return dst;
