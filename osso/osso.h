@@ -2,6 +2,7 @@
 #define OSSO_H
 
 #include "../libcdg/libcdg.h"
+#include <time.h>
 
 // TODO: make multi platform
 typedef struct {
