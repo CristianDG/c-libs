@@ -33,7 +33,7 @@
 
 # elif defined(__GNUC__) || defined(__GNUG__) // compiler switch
 
-#  define DG_COMPILER_GCC 0
+#  define DG_COMPILER_GCC 1
 
 #  if defined(__gnu_linux__) || defined(__linux__)
 #   define DG_OS_LINUX 1
