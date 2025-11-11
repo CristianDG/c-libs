@@ -42,14 +42,14 @@ internal void dg_dynamic_array_grow(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32
 DG_SYMBOL void dg_dynamic_array_pop_impl(_DG_Any_Dynamic_Array *arr, void *dst, u32 item_size) {
   DG_ASSERT(arr->len > 0);
   if (dst) {
-    void *last_item_start = (void *)((uintptr)arr->data + ((arr->len - 1) * item_size));
+    void *last_item_start = (void *)((uptr)arr->data + ((arr->len - 1) * item_size));
     DG_MEMCPY(dst, last_item_start, item_size);
   }
   arr->len -= 1;
 }
 
 DG_SYMBOL void dg_dynamic_array_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size) {
-  void *dst = (void *)(((uintptr)arr->data) + (arr->len * item_size));
+  void *dst = (void *)(((uptr)arr->data) + (arr->len * item_size));
   arr->len++;
   DG_MEMCPY(dst, src, item_size);
 }

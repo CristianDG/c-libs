@@ -54,7 +54,7 @@ DG_SYMBOL void dg_scratch_memory_init_buffer(u8 *data, usize size)
       <= size
   );
 
-  uintptr curr_ptr = (uintptr)data;
+  uptr curr_ptr = (uptr)data;
   for (u32 i = 0; i < DG_SCRATCH_ARENA_COUNT; ++i) {
     global_scratch[i] = dg_arena_init_buffer((u8 *)curr_ptr, individual_arena_size);
     curr_ptr += individual_arena_size;
@@ -68,7 +68,7 @@ DG_SYMBOL DG_Arena *dg_arena_init_buffer(void *data, size_t size)
   DG_Arena *arena = data;
   DG_MEMSET(arena, 0, sizeof *arena);
 
-  arena->data = (void *)((uintptr)data + (sizeof *arena));
+  arena->data = (void *)((uptr)data + (sizeof *arena));
   arena->size = size;
 
   return arena;
@@ -100,15 +100,15 @@ internal uintptr_t dg_align_forward(uintptr_t ptr, size_t alignment)
 
 DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment)
 {
-  uintptr curr_ptr = (uintptr)arena->data + (uintptr)arena->cursor;
-  uintptr offset = dg_align_forward(curr_ptr, alignment);
-  offset -= (uintptr)arena->data;
+  uptr curr_ptr = (uptr)arena->data + (uptr)arena->cursor;
+  uptr offset = dg_align_forward(curr_ptr, alignment);
+  offset -= (uptr)arena->data;
 
   // TODO: trocar para um if, se extrapolar o tamanho fazer um realloc
   // além disso olhar se preciso fazer uma função para arena estatica e outra para arena dinamica
   DG_ASSERT(offset + size < arena->size);
 
-  void *ptr = (void *)((uintptr)arena->data + offset);
+  void *ptr = (void *)((uptr)arena->data + offset);
   arena->cursor = offset + size;
 
   arena->last_allocation = ptr;
@@ -119,7 +119,7 @@ DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignme
 DG_SYMBOL void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size) {
   void *result = 0;
   if (old_ptr == a->last_allocation) {
-    usize old_size = (uintptr)old_ptr - (uintptr)a->data + a->cursor;
+    usize old_size = (uptr)old_ptr - (uptr)a->data + a->cursor;
     if (new_size > old_size) {
       dg_arena_alloc(a, new_size - old_size);
     } else {
@@ -150,7 +150,7 @@ DG_SYMBOL void *dg_arena_realloc_impl(DG_Arena *arena, void *ptr, size_t new_siz
   void *result = 0;
   if (ptr == arena->last_allocation) {
     result = ptr;
-    isize last_size = ((uintptr)arena->data + arena->cursor) - (uintptr)ptr;
+    isize last_size = ((uptr)arena->data + arena->cursor) - (uptr)ptr;
 
     DG_ASSERT(last_size <= arena->size);
 

@@ -190,8 +190,8 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-typedef uintptr_t uintptr;
-typedef intptr_t intptr;
+typedef uintptr_t uptr;
+typedef intptr_t iptr;
 
 typedef size_t usize;
 typedef ptrdiff_t isize;
@@ -205,6 +205,8 @@ typedef float  f32;
 typedef double f64;
 
 typedef u32 b32;
+
+typedef u8 byte;
 
 #define global_variable static
 #define local_persist static
@@ -232,7 +234,7 @@ typedef u32 b32;
 
 #define DG_STATEMENT(x) do { x } while (0)
 
-#define ARRAY_LEN(arr) (sizeof(arr) / sizeof((arr)[0]))
+#define DG_ARRAY_LEN(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define STR(x) #x
 #define GLUE_IMPL(a,b) a##b
@@ -271,7 +273,7 @@ typedef u32 b32;
   (*((type *)&(val)))
 
 #define DG_OFFSET_OF(type, field) \
-  ((uintptr)&(((type *) 0)->field))
+  ((uptr)&(((type *) 0)->field))
 
 #define DG_DYNAMIC_ACCESS(type, offset) \
   (((void *)(type))+offset)

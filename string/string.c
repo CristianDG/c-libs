@@ -132,7 +132,7 @@ String8 string_list_to_string8(DG_Arena *a, String_List *list)
   }
   *ptr = 0;
 
-  DG_ASSERT(((uintptr)result.data + result.len) == (uintptr)ptr);
+  DG_ASSERT(((uptr)result.data + result.len) == (uptr)ptr);
 
   return result;
 }
@@ -164,10 +164,10 @@ String_Node *string_list_push_fmt(DG_Arena *a, String_List *list, char *fmt, ...
   return string_list_push_node(list, result);
 }
 
-String_Node *string_list_push_string_slice(DG_Arena *a, String_List *list, String8 str)
+String_Node *string_list_push_string8(DG_Arena *a, String_List *list, String8 str)
 {
   String_Node *result = dg_arena_alloc(a, sizeof *result);
-  result->data = string8_copy(a, str);
+  result->data = str;
 
 
   return string_list_push_node(list, result);
@@ -177,7 +177,7 @@ usize cstring_len(char *str)
 {
   char *ptr = str;
   for (; ptr != 0; ptr++){
-    // NOTE: will be optimized away?
+    // NOTE: will this be optimized away?
   }
   return (usize)(ptr - str);
 }
@@ -196,3 +196,22 @@ String_Node *string_list_push_cstring(DG_Arena *a, String_List *list, char *str)
 }
 
 #define string_list_push_string_literal(a, list, str) string_list_push_ncstring(a, list, ensure_string_literal(str), sizeof str);
+
+DG_SYMBOL String_List string8_split_lines(DG_Arena *a, String8 str)
+{
+  String_List result = {0};
+
+  i32 substr_start = 0;
+  for (i32 i = 0; i < str.len; ++i) {
+    if (str.data[i] == '\n') {
+      // FIXME: \r\n???
+      i32 substr_end = i;
+      String8 substr = string8_sub_slice(str, substr_start, substr_end);
+      string_list_push_string8(a, &result, substr);
+      substr_start = i + 1;
+    }
+  }
+
+  return result;
+}
+
