@@ -258,9 +258,9 @@ typedef u8 byte;
 #endif // }}} DG_STATIC_ASSERT
 
 // NOTE: vou deixar sem as parenteses para ver se não tenho erros básicos de macros
-#define ABS(a)   ((a) > (0) ? a : -a)
-#define MAX(a,b) ((a) > (b) ? a :  b)
-#define MIN(a,b) ((a) < (b) ? a :  b)
+#define ABS(a)   ((a) > (0) ? (a) : -(a))
+#define MAX(a,b) ((a) > (b) ? (a) :  (b))
+#define MIN(a,b) ((a) < (b) ? (a) :  (b))
 #define CLAMP(val, min, max) (val < min ? min : (val > max ? max : val))
 
 #define CLAMP_TOP MIN
@@ -268,6 +268,7 @@ typedef u8 byte;
 
 #define KILOBYTE 1024
 #define MEGABYTE 1048576L
+#define GIGABYTE (MEGABYTE * 1024L)
 
 #define DG_REINTERPRET_CAST(type, val) \
   (*((type *)&(val)))
@@ -306,19 +307,26 @@ typedef u8 byte;
 # endif
 #endif // DG_CRASH
 
+
+#if !defined(DG_ENSURE_MSG_PASS_LOC)
+# define DG_ENSURE_MSG_PASS_LOC(exp, msg, file, line) \
+  DG_STATEMENT({ \
+    if ((exp) == false) { \
+    DG_LOG_ERROR("%s:%d: assertion '%s' failed\n", file, line, msg); \
+    DG_CRASH(); \
+    } \
+    })
+# define DG_ENSURE_MSG(exp, msg) DG_ENSURE_MSG_PASS_LOC(exp, msg, __FILE__, __LINE__)
+# define DG_ENSURE(exp) DG_ENSURE_MSG(exp, STR(exp))
+#endif
+
 #if defined(DG_NO_ASSERT)
 # define DG_ASSERT_MSG_PASS_LOC(exp, msg, file, line)
 # define DG_ASSERT_MSG(exp, msg)
 # define DG_ASSERT(exp)
 #else
 # if !defined(DG_ASSERT_MSG_PASS_LOC) // {{{
-#  define DG_ASSERT_MSG_PASS_LOC(exp, msg, file, line) \
-   DG_STATEMENT({ \
-     if ((exp) == false) { \
-       DG_LOG_ERROR("%s:%d: assertion '%s' failed\n", file, line, msg); \
-       DG_CRASH(); \
-     } \
-   })
+#  define DG_ASSERT_MSG_PASS_LOC(exp, msg, file, line) DG_ENSURE_MSG_PASS_LOC(exp, msg, file, line)
 #  define DG_ASSERT_MSG(exp, msg) DG_ASSERT_MSG_PASS_LOC(exp, msg, __FILE__, __LINE__)
 #  define DG_ASSERT(exp) DG_ASSERT_MSG(exp, STR(exp))
 # endif // }}}
@@ -386,41 +394,39 @@ void free(void *ptr);
 #define DG_MEMZERO(ptr) DG_MEMSET(ptr, DG_MEMZERO_ZERO, sizeof *(ptr))
 #endif
 
-typedef struct {
-  void *data;
+typedef struct DG_Arena DG_Arena;
+struct DG_Arena {
+  DG_Arena *prev;
+  DG_Arena *current;
   // TODO: add temp_count
-  u32 size;
-  u32 cursor;
-  void *last_allocation;
-} DG_Arena;
+  usize size;
+
+  usize base_pos;  // base position on the chain
+  usize pos;       // current position relative to the arena
+};
 
 typedef struct {
   DG_Arena *arena;
-  u32 cursor;
+  usize cursor;
   void *last_allocation;
 } DG_Temp_Arena;
 
+typedef DG_Temp_Arena DG_Scratch;
 
 DG_SYMBOL DG_Arena *dg_arena_init(void);
 DG_SYMBOL DG_Arena *dg_arena_init_buffer(void *data, size_t size);
 
-DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment);
-DG_SYMBOL void *dg_tracking_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment, char *file, i32 line);
+DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment, char *file, int line);
 
 DG_SYMBOL DG_Temp_Arena dg_temp_arena_begin(DG_Arena *a);
 DG_SYMBOL void dg_temp_arena_end(DG_Temp_Arena tmp_mem);
 
 DG_SYMBOL void dg_arena_clear(DG_Arena *arena);
 
-DG_SYMBOL void *dg_arena_realloc_impl(DG_Arena *arena, void *ptr, size_t size, size_t alignment);
+DG_SYMBOL void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size);
 
-#if defined(DG_ARENA_DEBUG)
-# define dg_arena_alloc(arena, size) dg_tracking_arena_alloc_impl(arena, size, DG_DEFAULT_ALIGNMENT, __FILE__, __LINE__)
-# define dg_arena_alloc_pass_loc(arena, size, file, line) dg_tracking_arena_alloc_impl(arena, size, DG_DEFAULT_ALIGNMENT, file, line)
-#else /* !defined(DG_ARENA_DEBUG) */
-# define dg_arena_alloc(arena, size) dg_arena_alloc_impl(arena, size, DG_DEFAULT_ALIGNMENT)
-# define dg_arena_alloc_pass_loc(arena, size, file, line) dg_arena_alloc_impl(arena, size, DG_DEFAULT_ALIGNMENT)
-#endif /* !defined(DG_ARENA_DEBUG) */
+#define dg_arena_alloc(arena, size) dg_arena_alloc_impl(arena, size, DG_DEFAULT_ALIGNMENT, __FILE__, __LINE__)
+#define dg_arena_alloc_pass_loc(arena, size, file, line) dg_arena_alloc_impl(arena, size, DG_DEFAULT_ALIGNMENT, file, line)
 
 #define DG_Temp_Guard(arena) \
   for (DG_Temp_Arena GLUE(_dg_tam_, __LINE__) = dg_temp_arena_begin(arena) \

@@ -4,7 +4,7 @@
 #define DG_SCRATCH_ARENA_COUNT 2
 #endif
 
-global_variable thread_static DG_Arena *global_scratch[2] = {0};
+global_variable thread_static DG_Arena *global_scratch[DG_SCRATCH_ARENA_COUNT] = {0};
 
 DG_SYMBOL void dg_scratch_memory_init(void)
 {
@@ -49,6 +49,8 @@ DG_SYMBOL void dg_scratch_memory_init_buffer(u8 *data, usize size)
   u32 non_reserved_size = size - sizeof(global_scratch);
   u32 individual_arena_size = non_reserved_size / DG_SCRATCH_ARENA_COUNT;
 
+  DG_ENSURE(individual_arena_size > sizeof(DG_Arena));
+
   DG_ASSERT(
       (individual_arena_size * DG_SCRATCH_ARENA_COUNT)
       <= size
@@ -68,8 +70,10 @@ DG_SYMBOL DG_Arena *dg_arena_init_buffer(void *data, size_t size)
   DG_Arena *arena = data;
   DG_MEMSET(arena, 0, sizeof *arena);
 
-  arena->data = (void *)((uptr)data + (sizeof *arena));
   arena->size = size;
+
+  arena->current = arena;
+  arena->pos = sizeof(*arena);
 
   return arena;
 }
@@ -98,95 +102,106 @@ internal uintptr_t dg_align_forward(uintptr_t ptr, size_t alignment)
   return p;
 }
 
-DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment)
+// TODO: olhar https://youtu.be/443UNeGrFoM?si=DBJXmKB_z8W8Yrrf&t=3074
+DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment, char *file, int line)
 {
-  uptr curr_ptr = (uptr)arena->data + (uptr)arena->cursor;
-  uptr offset = dg_align_forward(curr_ptr, alignment);
-  offset -= (uptr)arena->data;
+  DG_Arena *current = arena->current;
 
-  // TODO: trocar para um if, se extrapolar o tamanho fazer um realloc
-  // além disso olhar se preciso fazer uma função para arena estatica e outra para arena dinamica
-  DG_ASSERT(offset + size < arena->size);
+  uptr pos_pre = dg_align_forward(current->pos, alignment);
+  uptr pos_post = pos_pre + size;
 
-  void *ptr = (void *)((uptr)arena->data + offset);
-  arena->cursor = offset + size;
+  if (pos_post > current->size) {
+    DG_Arena *next = 0;
 
-  arena->last_allocation = ptr;
-  // FIXME: colocar uma versão onde o memset usa 0xFE no lugar de 0
-  return DG_MEMSET(ptr, 0, size);
+    // TODO: get page size
+    usize commit_size = dg_align_forward(size + sizeof(DG_Arena), alignment);
+    commit_size = MAX(commit_size, 4 * KILOBYTE);
+    u8 *data = DG_MALLOC(commit_size);
+    next = dg_arena_init_buffer(data, commit_size);
+
+    next->base_pos = current->base_pos + current->size;
+
+    next->prev = arena->current;
+    arena->current = next;
+
+    current = next;
+    pos_pre = dg_align_forward(current->pos, alignment);
+    pos_post = pos_pre + size;
+  }
+
+  void *result = 0;
+  result = (u8 *)current + pos_pre;
+  current->pos = pos_post;
+  DG_MEMZERO_SIZE(result, size);
+
+  return result;
 }
 
 DG_SYMBOL void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size) {
+  DG_LOG_ERROR("[WARNING]: deprecated buggy function: %s", __FUNCTION__);
   void *result = 0;
-  if (old_ptr == a->last_allocation) {
-    usize old_size = (uptr)old_ptr - (uptr)a->data + a->cursor;
-    if (new_size > old_size) {
-      dg_arena_alloc(a, new_size - old_size);
-    } else {
-      a->cursor -= old_size - new_size;
-    }
-
-    result = old_ptr;
-  } else {
-    result = dg_arena_alloc(a, new_size);
-  }
+  // if (old_ptr == a->last_allocation) {
+  //   usize old_size = (uptr)old_ptr - (uptr)a->data + a->pos;
+  //   if (new_size > old_size) {
+  //     dg_arena_alloc(a, new_size - old_size);
+  //   } else {
+  //     a->cursor -= old_size - new_size;
+  //   }
+  //
+  //   result = old_ptr;
+  // } else {
+  //   result = dg_arena_alloc(a, new_size);
+  // }
 
   return result;
 }
 
-// TODO: olhar https://youtu.be/443UNeGrFoM?si=DBJXmKB_z8W8Yrrf&t=3074
-DG_SYMBOL void *dg_tracking_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignment, char *file, i32 line)
+DG_SYMBOL void dg_arena_deinit(DG_Arena *a)
 {
-  // TODO: registrar onde foram todas as alocações
-  void *ptr = dg_arena_alloc_impl(arena, size, alignment);
-  if (ptr == 0) {
-    DG_LOG_ERROR("%s:%d Could not allocate %zu bytes\n", file, line, size);
-  }
-  return ptr;
+  free(a);
 }
 
-DG_SYMBOL void *dg_arena_realloc_impl(DG_Arena *arena, void *ptr, size_t new_size, size_t alignment)
+DG_SYMBOL void dg_arena_pop_to(DG_Arena *a, usize pos)
 {
-  void *result = 0;
-  if (ptr == arena->last_allocation) {
-    result = ptr;
-    isize last_size = ((uptr)arena->data + arena->cursor) - (uptr)ptr;
 
-    DG_ASSERT(last_size <= arena->size);
-
-    if (last_size < new_size) {
-      usize size_diff = new_size - last_size;
-      arena->cursor += new_size;
-    } else if (last_size > new_size) {
-      usize size_diff = last_size - new_size;
-      arena->cursor -= new_size;
-    }
-
-  } else {
-    result = dg_arena_alloc_impl(arena, new_size, alignment);
+  internal u32 count;
+  count++;
+  if (count == 3) {
+    DG_BREAKPOINT;
   }
 
-  return result;
+  usize actual_pos = CLAMP_BOTTOM(sizeof(DG_Arena), pos);
+  DG_Arena *current = a->current;
+
+  for (DG_Arena *tmp = current; tmp->base_pos >= actual_pos;) {
+    tmp = tmp->prev;
+    dg_arena_deinit(current);
+    current = tmp;
+  }
+
+  a->current = current;
+  usize new_pos = actual_pos - current->base_pos;
+  DG_ENSURE(new_pos <= current->pos);
+  current->pos = new_pos;
 }
 
 DG_SYMBOL DG_Temp_Arena dg_temp_arena_begin(DG_Arena *a)
 {
+  DG_Arena *current = a->current;
+  usize cursor = current->base_pos + current->pos;
   return (DG_Temp_Arena) {
     .arena = a,
-    .cursor = a->cursor,
-    .last_allocation = a->last_allocation,
+    .cursor = cursor,
   };
 }
 
 DG_SYMBOL void dg_temp_arena_end(DG_Temp_Arena tmp_mem)
 {
-  tmp_mem.arena->cursor = tmp_mem.cursor;
-  tmp_mem.arena->last_allocation = tmp_mem.last_allocation;
-  tmp_mem.arena = 0;
+  dg_arena_pop_to(tmp_mem.arena, tmp_mem.cursor);
 }
 
 // TODO:
 DG_SYMBOL void dg_arena_clear(DG_Arena *arena)
 {
-  arena->cursor = 0;
+  dg_arena_pop_to(arena, 0);
 }
