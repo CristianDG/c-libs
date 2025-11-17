@@ -390,8 +390,20 @@ void free(void *ptr);
 #define DG_FREE free
 #endif
 
+#ifndef DG_MEMZERO_ZERO
+# if DG_DEBUG
+#  define DG_MEMZERO_ZERO 0xcd
+# else
+#  define DG_MEMZERO_ZERO 0
+# endif
+#endif
+
+#ifndef DG_MEMZERO_SIZE
+#define DG_MEMZERO_SIZE(ptr, size) DG_MEMSET(ptr, DG_MEMZERO_ZERO, size)
+#endif
+
 #ifndef DG_MEMZERO
-#define DG_MEMZERO(ptr) DG_MEMSET(ptr, DG_MEMZERO_ZERO, sizeof *(ptr))
+#define DG_MEMZERO(ptr) DG_MEMZERO_SIZE(ptr, sizeof *(ptr))
 #endif
 
 typedef struct DG_Arena DG_Arena;
