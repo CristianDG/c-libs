@@ -114,8 +114,19 @@ DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignme
     DG_Arena *next = 0;
 
     // TODO: get page size
-    usize commit_size = dg_align_forward(size + sizeof(DG_Arena), alignment);
+    usize arena_size_aligned = dg_align_forward(sizeof(DG_Arena), alignment);
+    usize commit_size = dg_align_forward(size + arena_size_aligned, alignment);
     commit_size = MAX(commit_size, 4 * KILOBYTE);
+
+    { // NOTE: round to nearest kilobyte
+      u32 kb_ammount = 0;
+      kb_ammount = (commit_size / KILOBYTE);
+      if (commit_size % KILOBYTE) {
+        kb_ammount += 1;
+      }
+      commit_size = kb_ammount * KILOBYTE;
+    }
+
     u8 *data = DG_MALLOC(commit_size);
     next = dg_arena_init_buffer(data, commit_size);
 
