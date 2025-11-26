@@ -469,28 +469,30 @@ struct { \
   type *data; \
 }
 
+#define DG_DYNAMIC_ARRAY_ITEM_SIZE(arr) sizeof(*(arr)->data)
+
 // typedef void _DG_Any_Dynamic_Array;
 typedef DG_Make_Dynamic_Array_Type(void) _DG_Any_Dynamic_Array;
 
 DG_SYMBOL void dg_dynamic_array_make_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size);
-#define dg_dynamic_array_make(arena, arr, capacity) dg_dynamic_array_make_impl(arena, (_DG_Any_Dynamic_Array *) arr, capacity, sizeof(*(arr)->data))
+#define dg_dynamic_array_make(arena, arr, capacity) dg_dynamic_array_make_impl(arena, (_DG_Any_Dynamic_Array *) arr, capacity, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 DG_SYMBOL void dg_dynamic_array_pop_impl(_DG_Any_Dynamic_Array *arr, void *dst, u32 item_size);
 #define dg_dynamic_array_pop_discard(arr) dg_dynamic_array_pop_impl((_DG_Any_Dynamic_Array *) arr, NULL, 0)
 #define dg_dynamic_array_pop_size(arr, item, size) dg_dynamic_array_pop_impl((_DG_Any_Dynamic_Array *) arr, (void *) &(item), size)
-#define dg_dynamic_array_pop(arr, item) dg_dynamic_array_pop_size(arr, item, sizeof(*(arr)->data))
+#define dg_dynamic_array_pop(arr, item) dg_dynamic_array_pop_size(arr, item, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 DG_SYMBOL bool dg_dynamic_array_try_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size);
 #define dg_dynamic_array_try_push_size(arr, item, size) dg_dynamic_array_try_push_impl((_DG_Any_Dynamic_Array *) arr, (void *) item, size)
-#define dg_dynamic_array_try_push(arr, item) dg_dynamic_array_try_push_size(arr, item, sizeof(*(arr)->data))
+#define dg_dynamic_array_try_push(arr, item) dg_dynamic_array_try_push_size(arr, item, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 DG_SYMBOL void dg_dynamic_array_push_or_error_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size);
 #define dg_dynamic_array_push_size_or_error(arr, item, size) dg_dynamic_array_push_or_error_impl((_DG_Any_Dynamic_Array *)arr, (void *) &item, size)
-#define dg_dynamic_array_push_or_error(arr, item) dg_dynamic_array_push_size_or_error(arr, item, sizeof(*(arr)->data))
+#define dg_dynamic_array_push_or_error(arr, item) dg_dynamic_array_push_size_or_error(arr, item, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 DG_SYMBOL void dg_dynamic_array_push_or_grow_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, void *data, u32 item_size);
 #define dg_dynamic_array_push_size_or_grow(a, arr, item, size) dg_dynamic_array_push_or_grow_impl(a, (_DG_Any_Dynamic_Array *)arr, (void *) &item, size)
-#define dg_dynamic_array_push_or_grow(a, arr, item) dg_dynamic_array_push_size_or_grow(a, arr, item, sizeof(*(arr)->data))
+#define dg_dynamic_array_push_or_grow(a, arr, item) dg_dynamic_array_push_size_or_grow(a, arr, item, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 #define dg_dynamic_array_push dg_dynamic_array_push_or_grow
 
@@ -508,11 +510,11 @@ struct { \
   type *data; \
 }
 
-
+#define DG_SLICE_ITEM_SIZE(slice) sizeof(*(slice)->data)
 typedef DG_Make_Slice_Type(void) _DG_Any_Slice;
 
 DG_SYMBOL void dg_slice_make_impl(DG_Arena *a, _DG_Any_Slice *slice, u64 len, u64 item_size);
-#define dg_slice_make(arena, slice, len) dg_slice_make_impl(arena, (_DG_Any_Slice *)slice, len, sizeof(*(slice)->data))
+#define dg_slice_make(arena, slice, len) dg_slice_make_impl(arena, (_DG_Any_Slice *)slice, len, DG_SLICE_ITEM_SIZE(slice))
 
 //
 // Singly Linked Lists (Sll)
