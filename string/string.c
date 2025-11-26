@@ -12,6 +12,8 @@ typedef struct {
   u32 total_size;
 } String_List;
 
+typedef DG_Make_Slice_Type(String8) String_Array;
+
 String8 string8(char *str, usize len)
 {
   String8 result = { 0 };
@@ -68,8 +70,8 @@ String8 string8_from_cstring(char *data, u32 len) {
 
 String8 string8_sub_slice(String8 str, u32 low, u32 high) {
 
-  DG_ASSERT(low < high);
-  DG_ASSERT(low < str.len);
+  DG_ASSERT(low <= high);
+  DG_ASSERT(low <= str.len);
   DG_ASSERT(high <= str.len);
 
   String8 result = {0};
@@ -197,20 +199,78 @@ String_Node *string_list_push_cstring(DG_Arena *a, String_List *list, char *str)
 
 #define string_list_push_string_literal(a, list, str) string_list_push_ncstring(a, list, ensure_string_literal(str), sizeof str);
 
-DG_SYMBOL String_List string8_split_lines(DG_Arena *a, String8 str)
+DG_SYMBOL String_List string8_split_on_char(DG_Arena *a, String8 str, char c)
 {
   String_List result = {0};
 
+  b32 keep_empties = false;
+
   i32 substr_start = 0;
+  i32 substr_end = 0;
   for (i32 i = 0; i < str.len; ++i) {
-    if (str.data[i] == '\n') {
-      // FIXME: \r\n???
-      i32 substr_end = i;
-      String8 substr = string8_sub_slice(str, substr_start, substr_end);
-      string_list_push_string8(a, &result, substr);
+    b32 is_split = false;
+    b32 include_last = false;
+
+    is_split |= str.data[i] == c;
+    if (i == str.len-1) {
+      if (str.data[i] != c) {
+        include_last = true;
+      }
+      is_split = true;
+    }
+
+
+    if (str.data[i] == c || i == str.len-1) {
+      substr_end = i + include_last;
+      if (substr_end - substr_start != 0 || keep_empties) {
+        String8 substr = string8_sub_slice(str, substr_start, substr_end);
+        string_list_push_string8(a, &result, substr);
+      }
       substr_start = i + 1;
     }
   }
+
+  return result;
+}
+
+DG_SYMBOL String_List string8_split_lines(DG_Arena *a, String8 str)
+{
+  // FIXME: \r\n???
+  return string8_split_on_char(a, str, '\n');
+}
+
+
+DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List *list)
+{
+  String_Array result;
+  result.len   = list->node_count;
+  result.data = dg_arena_alloc(a, sizeof(String8) * result.len);
+
+  i32 idx = 0;
+  for(String_Node *n = list->first; n != 0; n = n->next, idx += 1)
+  {
+    result.data[idx] = n->data;
+  }
+  return result;
+}
+
+DG_SYMBOL u32 string8_parse_u32(String8 str)
+{
+  u32 result = 0;
+
+  DG_Scratch scratch = dg_scratch_get(0);
+  result = atol(string8_copy_to_cstring(scratch.arena, str));
+  dg_scratch_release(scratch);
+
+  return result;
+}
+
+DG_SYMBOL i32 string8_parse_i32(String8 str)
+{
+  i32 result = 0;
+  DG_Scratch scratch = dg_scratch_get(0);
+  result = atoi(string8_copy_to_cstring(scratch.arena, str));
+  dg_scratch_release(scratch);
 
   return result;
 }
