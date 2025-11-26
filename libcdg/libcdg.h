@@ -294,6 +294,8 @@ typedef u8 byte;
 # define DG_LOG_ERROR(...) fprintf(stderr, __VA_ARGS__)
 #endif // DG_LOG_ERROR
 
+// TODO: DG_LOG rework
+
 #ifndef DG_LOG
 # include <stdio.h>
 # define DG_LOG(...) fprintf(stdout, __VA_ARGS__)
@@ -420,7 +422,6 @@ struct DG_Arena {
 typedef struct {
   DG_Arena *arena;
   usize cursor;
-  void *last_allocation;
 } DG_Temp_Arena;
 
 typedef DG_Temp_Arena DG_Scratch;
@@ -455,6 +456,12 @@ DG_SYMBOL DG_Temp_Arena dg_scratch_get(DG_Arena *conflict);
 // }}}
 // containers {{{
 
+typedef i8 Ordering_Kind;
+enum {
+  ORDERING_LT = -1,
+  ORDERING_EQ = 0,
+  ORDERING_GT = 1,
+};
 
 //
 // dynamic arrays
@@ -499,6 +506,18 @@ DG_SYMBOL void dg_dynamic_array_push_or_grow_impl(DG_Arena *a, _DG_Any_Dynamic_A
 DG_SYMBOL void dg_dynamic_array_clear_impl(_DG_Any_Dynamic_Array *arr);
 #define dg_dynamic_array_clear(arr) dg_dynamic_array_clear_impl((_DG_Any_Dynamic_Array *) (arr))
 
+DG_SYMBOL void dg_dynamic_array_mergesort_impl(
+  _DG_Any_Dynamic_Array *arr,
+  Ordering_Kind (*compare_fn)(void *, void *),
+  usize item_size
+);
+#define dg_dynamic_array_mergesort(arr, fn) \
+  dg_dynamic_array_mergesort_impl( \
+    (_DG_Any_Dynamic_Array *)arr, \
+    (Ordering_Kind (*)(void *, void *))fn, \
+    DG_DYNAMIC_ARRAY_ITEM_SIZE(arr) \
+  )
+
 
 //
 // slices
@@ -515,6 +534,34 @@ typedef DG_Make_Slice_Type(void) _DG_Any_Slice;
 
 DG_SYMBOL void dg_slice_make_impl(DG_Arena *a, _DG_Any_Slice *slice, u64 len, u64 item_size);
 #define dg_slice_make(arena, slice, len) dg_slice_make_impl(arena, (_DG_Any_Slice *)slice, len, DG_SLICE_ITEM_SIZE(slice))
+
+DG_SYMBOL void dg_slice_subslice_impl(_DG_Any_Slice *slice, i32 start, i32 finish, _DG_Any_Slice *out_subslice, usize item_size);
+#define dg_slice_subslice(slice, start, finish, out_subslice) \
+  dg_slice_subslice_impl((_DG_Any_Slice *)slice, start, finish, (_DG_Any_Slice *)out_subslice, DG_SLICE_ITEM_SIZE(slice))
+
+
+DG_SYMBOL void dg_slice_mergesort_impl(
+  _DG_Any_Slice *slice,
+  Ordering_Kind (*compare_fn)(void *, void *),
+  usize item_size
+);
+#define dg_slice_mergesort(slice, fn) \
+  dg_slice_mergesort_impl( \
+    (_DG_Any_Slice *)slice, \
+    (Ordering_Kind (*)(void *, void *))fn, \
+    DG_SLICE_ITEM_SIZE(slice) \
+  )
+
+DG_SYMBOL void dg_slice_copy_impl(DG_Arena *a, _DG_Any_Slice *slice, _DG_Any_Slice *out_slice, usize item_size);
+#define dg_slice_copy(arena, in_slice, out_slice) \
+  dg_slice_copy_impl(arena, (_DG_Any_Slice *)in_slice, (_DG_Any_Slice *) out_slice, DG_SLICE_ITEM_SIZE(out_slice))
+
+//
+// Exponential Array (Xar)
+//
+
+// TODO: !!!
+
 
 //
 // Singly Linked Lists (Sll)
