@@ -16,7 +16,7 @@ DG_SYMBOL void dg_dynamic_array_make_buffer_impl(u8 *data, usize data_size, _DG_
 }
 
 DG_SYMBOL void dg_dynamic_array_make_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size) {
-  u8 *data = dg_arena_alloc(a, item_size * capacity);
+  u8 *data = dg_arena_alloc_size(a, item_size * capacity);
   dg_dynamic_array_make_buffer_unchecked(arr, capacity, data);
 }
 
@@ -30,7 +30,7 @@ internal void dg_dynamic_array_grow(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32
   if (!replica.data) {
     // TODO: default capacity
     replica.cap = 8;
-    replica.data = dg_arena_alloc(a, 2 * item_size * replica.cap);
+    replica.data = dg_arena_alloc_size(a, 2 * item_size * replica.cap);
   } else {
     replica.data = dg_arena_realloc(a, replica.data, 2 * item_size * replica.cap);
   }
@@ -92,7 +92,7 @@ DG_SYMBOL _DG_Any_Slice dg_dynamic_array_as_slice(_DG_Any_Dynamic_Array *arr) {
 DG_SYMBOL void dg_slice_make_impl(DG_Arena *a, _DG_Any_Slice *slice, u64 len, u64 item_size){
   _DG_Any_Slice res = {0};
 
-  void *data = dg_arena_alloc(a, len * item_size);
+  void *data = dg_arena_alloc_size(a, len * item_size);
 
   if (data) {
     res.len = len;
@@ -240,7 +240,7 @@ DG_SYMBOL void dg_slice_subslice_impl(_DG_Any_Slice *slice, i32 start, i32 finis
 DG_SYMBOL void dg_slice_copy_impl(DG_Arena *a, _DG_Any_Slice *slice, _DG_Any_Slice *out_slice, usize item_size)
 {
   _DG_Any_Slice result = *slice;
-  result.data = dg_arena_alloc(a, slice->len * item_size);
+  result.data = dg_arena_alloc_size(a, slice->len * item_size);
   DG_MEMCPY(result.data, slice->data, slice->len * item_size);
   *out_slice = result;
 }

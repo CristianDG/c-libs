@@ -35,7 +35,7 @@ String8 string8_vfmt(DG_Arena *a, char *fmt, va_list args){
 
   int string_size = vsnprintf(0, 0, fmt, args2) + 1;
 
-  char *string = dg_arena_alloc(a, string_size);
+  char *string = dg_arena_alloc_size(a, string_size);
 
   vsnprintf(string, string_size, fmt, args2);
 
@@ -94,7 +94,7 @@ String8 string8_copy(DG_Arena *a, String8 str)
   String8 result = { 0 };
   usize size = string8_size(str);
 
-  result.data = dg_arena_alloc(a, size + 1);
+  result.data = dg_arena_alloc_size(a, size + 1);
   DG_MEMCPY(result.data, str.data, size);
 
   result.data[size] = 0;
@@ -120,7 +120,7 @@ String8 string_list_to_string8(DG_Arena *a, String_List *list)
 {
   String8 result = {0};
 
-  u8 *ptr = dg_arena_alloc(a, list->total_size + 1);
+  u8 *ptr = dg_arena_alloc_size(a, list->total_size + 1);
 
   result.data = ptr;
   result.len = list->total_size;
@@ -156,7 +156,7 @@ String_Node *string_list_push_node(String_List *list, String_Node *node)
 
 String_Node *string_list_push_fmt(DG_Arena *a, String_List *list, char *fmt, ...)
 {
-  String_Node *result = dg_arena_alloc(a, sizeof *result);
+  String_Node *result = dg_arena_alloc_size(a, sizeof *result);
 
   va_list args;
   va_start(args, fmt);
@@ -168,7 +168,7 @@ String_Node *string_list_push_fmt(DG_Arena *a, String_List *list, char *fmt, ...
 
 String_Node *string_list_push_string8(DG_Arena *a, String_List *list, String8 str)
 {
-  String_Node *result = dg_arena_alloc(a, sizeof *result);
+  String_Node *result = dg_arena_alloc_size(a, sizeof *result);
   result->data = str;
 
 
@@ -186,7 +186,7 @@ usize cstring_len(char *str)
 
 String_Node *string_list_push_ncstring(DG_Arena *a, String_List *list, char *str, u32 length)
 {
-  String_Node *node = dg_arena_alloc(a, sizeof *node);
+  String_Node *node = dg_arena_alloc_size(a, sizeof *node);
   node->data = string8(str, length);
 
   return string_list_push_node(list, node);
@@ -244,7 +244,7 @@ DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List *list)
 {
   String_Array result;
   result.len   = list->node_count;
-  result.data = dg_arena_alloc(a, sizeof(String8) * result.len);
+  result.data = dg_arena_alloc_size(a, sizeof(String8) * result.len);
 
   i32 idx = 0;
   for(String_Node *n = list->first; n != 0; n = n->next, idx += 1)

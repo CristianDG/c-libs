@@ -438,8 +438,10 @@ DG_SYMBOL void dg_arena_clear(DG_Arena *arena);
 
 DG_SYMBOL void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size);
 
-#define dg_arena_alloc(arena, size) dg_arena_alloc_impl(arena, size, DG_DEFAULT_ALIGNMENT, __FILE__, __LINE__)
-#define dg_arena_alloc_pass_loc(arena, size, file, line) dg_arena_alloc_impl(arena, size, DG_DEFAULT_ALIGNMENT, file, line)
+#define dg_arena_alloc_size_aligned(arena, size, alignment) dg_arena_alloc_impl(arena, size, alignment, __FILE__, __LINE__)
+#define dg_arena_alloc_size(arena, size)                    dg_arena_alloc_size_aligned(arena, size, DG_DEFAULT_ALIGNMENT)
+#define dg_arena_alloc_arr(arena, type, count)              dg_arena_alloc_size_aligned(arena, sizeof(type) * count, sizeof(type))
+#define dg_arena_alloc(arena, type)                         dg_arena_alloc_arr(arena, type, 1)
 
 #define DG_Temp_Guard(arena) \
   for (DG_Temp_Arena GLUE(_dg_tam_, __LINE__) = dg_temp_arena_begin(arena) \

@@ -23,7 +23,7 @@ char *osso_fd_read_entire_file(DG_Arena *a, FILE *file, usize *size)
   fseek(file, 0L, SEEK_SET);
 
   //TODO: error checking
-  result = dg_arena_alloc(a, sizeof(char) * (file_size + 1));
+  result = dg_arena_alloc_size(a, sizeof(char) * (file_size + 1));
 
   //TODO: error checking
   usize bytes_read = fread(result, sizeof(char), file_size, file);
