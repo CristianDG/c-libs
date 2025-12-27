@@ -2,7 +2,8 @@
 
 // Dynamic arrays
 
-internal inline void dg_dynamic_array_make_buffer_unchecked(_DG_Any_Dynamic_Array *arr, u32 capacity, u8 *data) {
+internal inline void dg_dynamic_array_make_buffer_unchecked(_DG_Any_Dynamic_Array *arr, u32 capacity, u8 *data)
+{
   _DG_Any_Dynamic_Array replica = {0};
   replica.cap = capacity;
   replica.data = data;
@@ -10,36 +11,39 @@ internal inline void dg_dynamic_array_make_buffer_unchecked(_DG_Any_Dynamic_Arra
 }
 
 // TODO: colocar em libcdg.h
-DG_SYMBOL void dg_dynamic_array_make_buffer_impl(u8 *data, usize data_size, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size) {
+DG_SYMBOL void dg_dynamic_array_make_buffer_impl(u8 *data, usize data_size, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size)
+{
   DG_ASSERT((usize)(capacity * item_size) <= data_size);
   dg_dynamic_array_make_buffer_unchecked(arr, capacity, data);
 }
 
-DG_SYMBOL void dg_dynamic_array_make_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size) {
+DG_SYMBOL void dg_dynamic_array_make_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size)
+{
   u8 *data = dg_arena_alloc_size(a, item_size * capacity);
   dg_dynamic_array_make_buffer_unchecked(arr, capacity, data);
 }
 
 
-// FIXME: utilizar DG_Allocator_Header no lugar de DG_Arena,
-// pra isso preciso criar uma especie de função de realloc
-internal void dg_dynamic_array_grow(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 item_size) {
+internal void dg_dynamic_array_grow(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 item_size)
+{
   _DG_Any_Dynamic_Array replica = {0};
   DG_MEMCPY(&replica, arr, sizeof(replica));
 
   if (!replica.data) {
-    // TODO: default capacity
+    // TODO: default capacity as parameter
     replica.cap = 8;
     replica.data = dg_arena_alloc_size(a, 2 * item_size * replica.cap);
   } else {
-    replica.data = dg_arena_realloc(a, replica.data, 2 * item_size * replica.cap);
+    // TODO: if the last allocation was this dynamic array, does not need to copy the data and change the pointer
+    replica.data = dg_arena_alloc_size(a, 2 * item_size * replica.cap);
+    DG_MEMCPY(replica.data, arr->data, arr->len * item_size);
   }
-
   replica.cap *= 2;
   DG_MEMCPY(arr, &replica, sizeof(replica));
 }
 
-DG_SYMBOL void dg_dynamic_array_pop_impl(_DG_Any_Dynamic_Array *arr, void *dst, u32 item_size) {
+DG_SYMBOL void dg_dynamic_array_pop_impl(_DG_Any_Dynamic_Array *arr, void *dst, u32 item_size)
+ {
   DG_ASSERT(arr->len > 0);
   if (dst) {
     void *last_item_start = (void *)((uptr)arr->data + ((arr->len - 1) * item_size));
@@ -48,13 +52,17 @@ DG_SYMBOL void dg_dynamic_array_pop_impl(_DG_Any_Dynamic_Array *arr, void *dst, 
   arr->len -= 1;
 }
 
-DG_SYMBOL void dg_dynamic_array_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size) {
+DG_SYMBOL void dg_dynamic_array_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size)
+ {
   void *dst = (void *)(((uptr)arr->data) + (arr->len * item_size));
   arr->len++;
+  // NOTE: remover?
+  DG_MEMZERO_SIZE(dst, item_size);
   DG_MEMCPY(dst, src, item_size);
 }
 
-DG_SYMBOL bool dg_dynamic_array_try_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size) {
+DG_SYMBOL bool dg_dynamic_array_try_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size)
+ {
   if (arr->len < arr->cap) {
     dg_dynamic_array_push_impl(arr, src, item_size);
     return true;
@@ -63,33 +71,49 @@ DG_SYMBOL bool dg_dynamic_array_try_push_impl(_DG_Any_Dynamic_Array *arr, void *
   return false;
 }
 
-DG_SYMBOL void dg_dynamic_array_push_or_error_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size) {
+DG_SYMBOL void dg_dynamic_array_push_or_error_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size)
+ {
   DG_ASSERT(arr->len < arr->cap);
   dg_dynamic_array_push_impl(arr, src, item_size);
 }
 
-DG_SYMBOL void dg_dynamic_array_push_or_grow_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, void *src, u32 item_size) {
+DG_SYMBOL void dg_dynamic_array_push_or_grow_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, void *src, u32 item_size)
+ {
   if (arr->len >= arr->cap) {
     dg_dynamic_array_grow(a, arr, item_size);
   }
   dg_dynamic_array_push_impl(arr, src, item_size);
 }
 
-DG_SYMBOL void dg_dynamic_array_clear_impl(_DG_Any_Dynamic_Array *arr) {
+DG_SYMBOL void dg_dynamic_array_clear_impl(_DG_Any_Dynamic_Array *arr)
+ {
   arr->len = 0;
 }
 
-DG_SYMBOL _DG_Any_Slice dg_dynamic_array_as_slice(_DG_Any_Dynamic_Array *arr) {
+DG_SYMBOL _DG_Any_Slice dg_dynamic_array_as_slice(_DG_Any_Dynamic_Array *arr)
+ {
   _DG_Any_Slice result = {0};
   result.len = arr->len;
   result.data = arr->data;
   return result;
 }
 
+DG_SYMBOL void dg_slice_make_from_dynamic_array_impl (
+  DG_Arena *arena,
+  _DG_Any_Slice *dest,
+  _DG_Any_Dynamic_Array *source,
+  u32 _slice_item_size
+) {
+  _DG_Any_Slice result_to_copy = dg_dynamic_array_as_slice(source);
+  dg_slice_copy_impl(arena, &result_to_copy, dest, _slice_item_size);
+}
+
 
 // Slices
 
-DG_SYMBOL void dg_slice_make_impl(DG_Arena *a, _DG_Any_Slice *slice, u64 len, u64 item_size){
+DG_SYMBOL void dg_slice_make_impl(DG_Arena *a, _DG_Any_Slice *slice, u32 len, u32 item_size)
+{
+  DG_ASSERT(most_significant_bit(len) <= 31);
   _DG_Any_Slice res = {0};
 
   void *data = dg_arena_alloc_size(a, len * item_size);
@@ -114,7 +138,8 @@ DG_SYMBOL void dg_slice_set(_DG_Any_Slice *arr, i32 index, void *value, u32 item
 
 }
 
-DG_SYMBOL void *dg_slice_get_ptr(_DG_Any_Slice *arr, i32 index, u32 item_size) {
+DG_SYMBOL void *dg_slice_get_ptr(_DG_Any_Slice *arr, i32 index, u32 item_size)
+ {
   DG_ASSERT(index >= 0);
   DG_ASSERT(index < arr->len);
 
@@ -122,7 +147,8 @@ DG_SYMBOL void *dg_slice_get_ptr(_DG_Any_Slice *arr, i32 index, u32 item_size) {
   return item_start;
 }
 
-DG_SYMBOL void dg_slice_get(_DG_Any_Slice *arr, i32 index, u32 item_size, void *opt_dst) {
+DG_SYMBOL void dg_slice_get(_DG_Any_Slice *arr, i32 index, u32 item_size, void *opt_dst)
+ {
   DG_ASSERT(opt_dst);
   void *item_start = dg_slice_get_ptr(arr, index, item_size);
   if (opt_dst) {
@@ -198,8 +224,8 @@ internal void _dg_slice_mergesort(
 DG_SYMBOL void dg_slice_mergesort_impl(
   _DG_Any_Slice *slice,
   Ordering_Kind (*compare_fn)(void *, void *),
-  usize item_size
-) {
+  usize item_size)
+{
   DG_ASSERT(compare_fn);
   DG_Temp_Arena scratch = dg_scratch_get(0);
   {
@@ -213,8 +239,8 @@ DG_SYMBOL void dg_slice_mergesort_impl(
 DG_SYMBOL void dg_dynamic_array_mergesort_impl(
   _DG_Any_Dynamic_Array *dynarr,
   Ordering_Kind (*compare_fn)(void *, void *),
-  usize item_size
-) {
+  usize item_size)
+{
   DG_ASSERT(dynarr);
   _DG_Any_Slice slice = dg_dynamic_array_as_slice(dynarr);
   dg_slice_mergesort_impl(&slice, compare_fn, item_size);
@@ -237,11 +263,11 @@ DG_SYMBOL void dg_slice_subslice_impl(_DG_Any_Slice *slice, i32 start, i32 finis
   *out_subslice = result;
 }
 
-DG_SYMBOL void dg_slice_copy_impl(DG_Arena *a, _DG_Any_Slice *slice, _DG_Any_Slice *out_slice, usize item_size)
+DG_SYMBOL void dg_slice_copy_impl(DG_Arena *a, _DG_Any_Slice *source, _DG_Any_Slice *dest, usize item_size)
 {
-  _DG_Any_Slice result = *slice;
-  result.data = dg_arena_alloc_size(a, slice->len * item_size);
-  DG_MEMCPY(result.data, slice->data, slice->len * item_size);
-  *out_slice = result;
+  _DG_Any_Slice result = *source;
+  result.data = dg_arena_alloc_size(a, source->len * item_size);
+  DG_MEMCPY(result.data, source->data, source->len * item_size);
+  *dest = result;
 }
 
