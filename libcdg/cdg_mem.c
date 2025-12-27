@@ -6,6 +6,19 @@
 
 global_variable thread_static DG_Arena *global_scratch[DG_SCRATCH_ARENA_COUNT] = {0};
 
+DG_SYMBOL u8 most_significant_bit(u64 value) {
+  u64 mask = 1;
+  mask <<= 63;
+  for (i64 i = 63; i >= 0; --i) {
+    if (value & mask) {
+      return i + 1;
+    }
+    mask >>= 1;
+  }
+
+  return 0;
+}
+
 DG_SYMBOL void dg_scratch_memory_init(void)
 {
   // TODO: reservar no lugar de alocar
@@ -88,6 +101,7 @@ internal uintptr_t dg_align_forward(uintptr_t ptr, size_t alignment)
 {
   uintptr_t p, a, modulo;
   if (!dg_is_power_of_two(alignment)) {
+    DG_CRASH();
     return 0;
   }
 
@@ -144,25 +158,6 @@ DG_SYMBOL void *dg_arena_alloc_impl(DG_Arena *arena, size_t size, size_t alignme
   result = (u8 *)current + pos_pre;
   current->pos = pos_post;
   DG_MEMZERO_SIZE(result, size);
-
-  return result;
-}
-
-DG_SYMBOL void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size) {
-  DG_LOG_ERROR("[WARNING]: deprecated buggy function: %s", __FUNCTION__);
-  void *result = 0;
-  // if (old_ptr == a->last_allocation) {
-  //   usize old_size = (uptr)old_ptr - (uptr)a->data + a->pos;
-  //   if (new_size > old_size) {
-  //     dg_arena_alloc(a, new_size - old_size);
-  //   } else {
-  //     a->cursor -= old_size - new_size;
-  //   }
-  //
-  //   result = old_ptr;
-  // } else {
-  //   result = dg_arena_alloc(a, new_size);
-  // }
 
   return result;
 }

@@ -205,6 +205,7 @@ typedef float  f32;
 typedef double f64;
 
 typedef u32 b32;
+typedef u8  b8;
 
 typedef u8 byte;
 
@@ -337,6 +338,14 @@ typedef u8 byte;
 #define DG_WIP \
   DG_ASSERT_MSG(false, "not implemented")
 
+#define DG_CRASH_WHEN_N_CALLS(num) \
+{\
+  local_persist usize GLUE(_dg_breakpoint_val_, __LINE__) = 0;\
+  if(++GLUE(_dg_breakpoint_val_, __LINE__) >= num) {\
+    DG_CRASH();\
+  }\
+}
+
 // }}}
 
 // alloc.c {{{
@@ -345,11 +354,22 @@ typedef u8 byte;
 #include <stddef.h>
 // #include <string.h> // for memset
 
-#define DG_DEFAULT_ALIGNMENT 16
+#define DG_DEFAULT_ALIGNMENT 8
 
-// TODO: WIP
-// typedef struct {
-// } Growing_Arena;
+#ifndef DG_STRLEN
+internal inline usize strlen_clamped(char *data, usize max_len) {
+  usize result = 0;
+  for (usize i = 0; i <= max_len; ++i) {
+    if (data[i] == '\0') {
+      result = i;
+      break;
+    }
+  }
+  return result;
+}
+#define DG_STRLEN(str) strlen_clamped(str, (u32)(-1)) // max 4gb
+#define DG_STRLEN_CLAMPED(str, max_len) strlen_clamped(str, max_len)
+#endif
 
 #ifndef DG_MEMCPY
 internal inline void *memcpy(void *dst, const void *src, usize size)
@@ -405,7 +425,7 @@ void free(void *ptr);
 #endif
 
 #ifndef DG_MEMZERO
-#define DG_MEMZERO(ptr) DG_MEMZERO_SIZE(ptr, sizeof *(ptr))
+#define DG_MEMZERO(ptr) DG_MEMZERO_SIZE(ptr, sizeof (*ptr))
 #endif
 
 typedef struct DG_Arena DG_Arena;
@@ -436,11 +456,10 @@ DG_SYMBOL void dg_temp_arena_end(DG_Temp_Arena tmp_mem);
 
 DG_SYMBOL void dg_arena_clear(DG_Arena *arena);
 
-DG_SYMBOL void *dg_arena_realloc(DG_Arena *a, void *old_ptr, usize new_size);
 
 #define dg_arena_alloc_size_aligned(arena, size, alignment) dg_arena_alloc_impl(arena, size, alignment, __FILE__, __LINE__)
 #define dg_arena_alloc_size(arena, size)                    dg_arena_alloc_size_aligned(arena, size, DG_DEFAULT_ALIGNMENT)
-#define dg_arena_alloc_arr(arena, type, count)              dg_arena_alloc_size_aligned(arena, sizeof(type) * count, sizeof(type))
+#define dg_arena_alloc_arr(arena, type, count)              dg_arena_alloc_size_aligned(arena, sizeof(type) * count, DG_DEFAULT_ALIGNMENT)
 #define dg_arena_alloc(arena, type)                         dg_arena_alloc_arr(arena, type, 1)
 
 #define DG_Temp_Guard(arena) \
@@ -454,6 +473,7 @@ DG_SYMBOL void dg_scratch_memory_init_buffer(u8 *data, usize size);
 DG_SYMBOL DG_Temp_Arena dg_scratch_get(DG_Arena *conflict);
 #define dg_scratch_release(scratch_arena) dg_temp_arena_end(scratch_arena)
 
+DG_SYMBOL u8 most_significant_bit(u64 value);
 
 // }}}
 // containers {{{
@@ -472,35 +492,44 @@ enum {
 // NOTE: implementation from https://nullprogram.com/blog/2023/10/05/
 
 #define DG_Make_Dynamic_Array_Type(type) \
-struct { \
-  i32 cap; \
-  i32 len; \
-  type *data; \
+  struct {                               \
+    type *data;                          \
+    i32 len;                             \
+    i32 cap;                             \
 }
 
-#define DG_DYNAMIC_ARRAY_ITEM_SIZE(arr) sizeof(*(arr)->data)
+#define DG_DYNAMIC_ARRAY_GET(arr, index) ((arr).data[(index)])
+#define DG_DYNAMIC_ARRAY_LEN(arr)        ((arr).len)
+#define DG_DYNAMIC_ARRAY_CAP(arr)        ((arr).cap)
 
-// typedef void _DG_Any_Dynamic_Array;
-typedef DG_Make_Dynamic_Array_Type(void) _DG_Any_Dynamic_Array;
+#if !defined(DG_NO_ABBREVIATIONS) || !DG_NO_ABBREVIATIONS
+ #define DA_GET DG_DYNAMIC_ARRAY_GET
+ #define DA_LEN DG_DYNAMIC_ARRAY_LEN
+ #define DA_CAP DG_DYNAMIC_ARRAY_CAP
+#endif
+
+#define DG_DYNAMIC_ARRAY_ITEM_SIZE(arr)  (sizeof(*(arr)->data))
+
+typedef DG_Make_Dynamic_Array_Type(byte) _DG_Any_Dynamic_Array;
 
 DG_SYMBOL void dg_dynamic_array_make_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size);
 #define dg_dynamic_array_make(arena, arr, capacity) dg_dynamic_array_make_impl(arena, (_DG_Any_Dynamic_Array *) arr, capacity, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 DG_SYMBOL void dg_dynamic_array_pop_impl(_DG_Any_Dynamic_Array *arr, void *dst, u32 item_size);
 #define dg_dynamic_array_pop_discard(arr) dg_dynamic_array_pop_impl((_DG_Any_Dynamic_Array *) arr, NULL, 0)
-#define dg_dynamic_array_pop_size(arr, item, size) dg_dynamic_array_pop_impl((_DG_Any_Dynamic_Array *) arr, (void *) &(item), size)
+#define dg_dynamic_array_pop_size(arr, item, size) dg_dynamic_array_pop_impl((_DG_Any_Dynamic_Array *) arr, &(item), size)
 #define dg_dynamic_array_pop(arr, item) dg_dynamic_array_pop_size(arr, item, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 DG_SYMBOL bool dg_dynamic_array_try_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size);
-#define dg_dynamic_array_try_push_size(arr, item, size) dg_dynamic_array_try_push_impl((_DG_Any_Dynamic_Array *) arr, (void *) item, size)
+#define dg_dynamic_array_try_push_size(arr, item, size) dg_dynamic_array_try_push_impl((_DG_Any_Dynamic_Array *) arr, &(item), size)
 #define dg_dynamic_array_try_push(arr, item) dg_dynamic_array_try_push_size(arr, item, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 DG_SYMBOL void dg_dynamic_array_push_or_error_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size);
-#define dg_dynamic_array_push_size_or_error(arr, item, size) dg_dynamic_array_push_or_error_impl((_DG_Any_Dynamic_Array *)arr, (void *) &item, size)
+#define dg_dynamic_array_push_size_or_error(arr, item, size) dg_dynamic_array_push_or_error_impl((_DG_Any_Dynamic_Array *)arr, &(item), size)
 #define dg_dynamic_array_push_or_error(arr, item) dg_dynamic_array_push_size_or_error(arr, item, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 DG_SYMBOL void dg_dynamic_array_push_or_grow_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, void *data, u32 item_size);
-#define dg_dynamic_array_push_size_or_grow(a, arr, item, size) dg_dynamic_array_push_or_grow_impl(a, (_DG_Any_Dynamic_Array *)arr, (void *) &item, size)
+#define dg_dynamic_array_push_size_or_grow(a, arr, item, size) dg_dynamic_array_push_or_grow_impl(a, (_DG_Any_Dynamic_Array *)arr, &(item), size)
 #define dg_dynamic_array_push_or_grow(a, arr, item) dg_dynamic_array_push_size_or_grow(a, arr, item, DG_DYNAMIC_ARRAY_ITEM_SIZE(arr))
 
 #define dg_dynamic_array_push dg_dynamic_array_push_or_grow
@@ -513,11 +542,12 @@ DG_SYMBOL void dg_dynamic_array_mergesort_impl(
   Ordering_Kind (*compare_fn)(void *, void *),
   usize item_size
 );
+
 #define dg_dynamic_array_mergesort(arr, fn) \
-  dg_dynamic_array_mergesort_impl( \
-    (_DG_Any_Dynamic_Array *)arr, \
-    (Ordering_Kind (*)(void *, void *))fn, \
-    DG_DYNAMIC_ARRAY_ITEM_SIZE(arr) \
+  dg_dynamic_array_mergesort_impl(          \
+    (_DG_Any_Dynamic_Array *)arr,           \
+    (Ordering_Kind (*)(void *, void *))fn,  \
+    DG_DYNAMIC_ARRAY_ITEM_SIZE(arr)         \
   )
 
 
@@ -526,15 +556,19 @@ DG_SYMBOL void dg_dynamic_array_mergesort_impl(
 //
 
 #define DG_Make_Slice_Type(type) \
-struct { \
-  i32 len; \
-  type *data; \
-}
+  struct {                       \
+    type *data;                  \
+    i32 len;                     \
+  }
+
+#define DG_SLICE_GET(slice, index) ((slice).data[(index)])
+#define DG_SLICE_LEN(slice)        ((slice).len)
 
 #define DG_SLICE_ITEM_SIZE(slice) sizeof(*(slice)->data)
+
 typedef DG_Make_Slice_Type(void) _DG_Any_Slice;
 
-DG_SYMBOL void dg_slice_make_impl(DG_Arena *a, _DG_Any_Slice *slice, u64 len, u64 item_size);
+DG_SYMBOL void dg_slice_make_impl(DG_Arena *a, _DG_Any_Slice *slice, u32 len, u32 item_size);
 #define dg_slice_make(arena, slice, len) dg_slice_make_impl(arena, (_DG_Any_Slice *)slice, len, DG_SLICE_ITEM_SIZE(slice))
 
 DG_SYMBOL void dg_slice_subslice_impl(_DG_Any_Slice *slice, i32 start, i32 finish, _DG_Any_Slice *out_subslice, usize item_size);
@@ -547,16 +581,30 @@ DG_SYMBOL void dg_slice_mergesort_impl(
   Ordering_Kind (*compare_fn)(void *, void *),
   usize item_size
 );
-#define dg_slice_mergesort(slice, fn) \
-  dg_slice_mergesort_impl( \
-    (_DG_Any_Slice *)slice, \
+#define dg_slice_mergesort(slice, fn)      \
+    dg_slice_mergesort_impl(               \
+    (_DG_Any_Slice *)slice,                \
     (Ordering_Kind (*)(void *, void *))fn, \
-    DG_SLICE_ITEM_SIZE(slice) \
+    DG_SLICE_ITEM_SIZE(slice)              \
   )
 
 DG_SYMBOL void dg_slice_copy_impl(DG_Arena *a, _DG_Any_Slice *slice, _DG_Any_Slice *out_slice, usize item_size);
 #define dg_slice_copy(arena, in_slice, out_slice) \
   dg_slice_copy_impl(arena, (_DG_Any_Slice *)in_slice, (_DG_Any_Slice *) out_slice, DG_SLICE_ITEM_SIZE(out_slice))
+
+DG_SYMBOL void dg_slice_make_from_dynamic_array_impl (
+  DG_Arena *arena,
+  _DG_Any_Slice *dest,
+  _DG_Any_Dynamic_Array *source,
+  u32 _slice_item_size
+);
+#define dg_slice_make_from_dynamic_array(arena, dest, source) \
+  dg_slice_make_from_dynamic_array_impl (                     \
+    arena,                                                    \
+    (_DG_Any_Slice *) dest,                                   \
+    (_DG_Any_Dynamic_Array *) source,                         \
+    DG_SLICE_ITEM_SIZE(dest)                                  \
+  )                                                           \
 
 //
 // Exponential Array (Xar)
@@ -603,7 +651,8 @@ internal void dg_sll_pop_front_impl(_DG_Any_Sll_Node **first, _DG_Any_Sll_Node *
   }
 }
 
-#define dg_sll_pop_front(first, last) dg_sll_pop_impl( \
+#define dg_sll_pop_front(first, last) \
+  dg_sll_pop_impl( \
     (_DG_Any_Sll_Node **) first, \
     (_DG_Any_Sll_Node **) last)
 
