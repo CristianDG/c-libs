@@ -1,20 +1,7 @@
-#include "../libcdg/libcdg.h"
+#include "string.h"
 #include <stdarg.h>
 
-typedef DG_Make_Slice_Type(u8) String8;
-
-typedef DG_Make_Sll_Node_Type(string_node, String8) String_Node;
-
-typedef struct {
-  String_Node *first;
-  String_Node *last;
-  u32 node_count;
-  u32 total_size;
-} String_List;
-
-typedef DG_Make_Slice_Type(String8) String_Array;
-
-String8 string8(char *str, usize len)
+DG_SYMBOL String8 string8(char *str, usize len)
 {
   String8 result = { 0 };
 
@@ -28,7 +15,8 @@ String8 string8(char *str, usize len)
   return result;
 }
 
-String8 string8_vfmt(DG_Arena *a, char *fmt, va_list args){
+DG_SYMBOL String8 string8_vfmt(DG_Arena *a, char *fmt, va_list args)
+{
 
   va_list args2;
   va_copy(args2, args);
@@ -46,7 +34,8 @@ String8 string8_vfmt(DG_Arena *a, char *fmt, va_list args){
   return string8(string, string_size);
 }
 
-String8 string8_fmt(DG_Arena *a, char *fmt, ...){
+DG_SYMBOL String8 string8_fmt(DG_Arena *a, char *fmt, ...)
+{
   String8 result = {0};
 
   va_list args;
@@ -57,18 +46,38 @@ String8 string8_fmt(DG_Arena *a, char *fmt, ...){
   return result;
 }
 
+DG_SYMBOL String8 string8_from_cstring_clamped(char *data, u32 max_len)
+{
+  String8 result = {0};
+  result.len = DG_STRLEN_CLAMPED(data, max_len);
+  result.data = (u8*)data;
+  return result;
+}
 
-String8 string8_from_cstring(char *data, u32 len) {
+DG_SYMBOL String8 string8_from_cstring(char *data)
+{
+  String8 result = {0};
+  result.len = DG_STRLEN(data);
+  result.data = (u8*)data;
+  return result;
+}
+
+DG_SYMBOL String8 string8_from_ncstring(char *data, u32 len)
+{
   String8 result = {0};
   result.len = len;
   result.data = (u8*)data;
   return result;
 }
 
-#define string_ensure_string_literal(str) ("" str "")
-#define string8_literal(str) string8_from_cstring(string_ensure_string_literal(str), (sizeof (str)) - 1)
+DG_SYMBOL String8 string8_substring_copy(DG_Arena *a, String8 str, u32 low, u32 high)
+{
+  String8 alias = string8_substring_alias(str, low, high);
+  return string8_copy(a, alias);
+}
 
-String8 string8_sub_slice(String8 str, u32 low, u32 high) {
+DG_SYMBOL String8 string8_substring_alias(String8 str, u32 low, u32 high)
+{
 
   DG_ASSERT(low <= high);
   DG_ASSERT(low <= str.len);
@@ -81,15 +90,17 @@ String8 string8_sub_slice(String8 str, u32 low, u32 high) {
   return result;
 }
 
-usize string8_len(String8 str) {
+DG_SYMBOL usize string8_len(String8 str)
+{
   return str.len;
 }
 
-usize string8_size(String8 str) {
+DG_SYMBOL usize string8_size(String8 str)
+{
   return (str.len * sizeof(u8));
 }
 
-String8 string8_copy(DG_Arena *a, String8 str)
+DG_SYMBOL String8 string8_copy(DG_Arena *a, String8 str)
 {
   String8 result = { 0 };
   usize size = string8_size(str);
@@ -103,12 +114,13 @@ String8 string8_copy(DG_Arena *a, String8 str)
   return result;
 }
 
-char *string8_copy_to_cstring(DG_Arena *a, String8 str)
+DG_SYMBOL char *string8_copy_to_cstring(DG_Arena *a, String8 str)
 {
   return (char*) string8_copy(a, str).data;
 }
 
-void string8_to_string(String8 str, char *buffer, usize buffer_size) {
+DG_SYMBOL void string8_to_string(String8 str, char *buffer, usize buffer_size)
+{
   usize size = MIN(buffer_size, string8_len(str) + 1);
   DG_MEMCPY(buffer, str.data, size);
 
@@ -116,7 +128,7 @@ void string8_to_string(String8 str, char *buffer, usize buffer_size) {
 }
 
 
-String8 string_list_to_string8(DG_Arena *a, String_List *list)
+DG_SYMBOL String8 string_list_to_string8(DG_Arena *a, String_List *list)
 {
   String8 result = {0};
 
@@ -139,12 +151,12 @@ String8 string_list_to_string8(DG_Arena *a, String_List *list)
   return result;
 }
 
-char *string_list_to_cstring(DG_Arena *a, String_List *list)
+DG_SYMBOL char *string_list_to_cstring(DG_Arena *a, String_List *list)
 {
   return (char *)string_list_to_string8(a, list).data;
 }
 
-String_Node *string_list_push_node(String_List *list, String_Node *node)
+DG_SYMBOL String_Node *string_list_push_node(String_List *list, String_Node *node)
 {
   dg_sll_push(&list->first, &list->last, node);
 
@@ -154,7 +166,7 @@ String_Node *string_list_push_node(String_List *list, String_Node *node)
   return node;
 }
 
-String_Node *string_list_push_fmt(DG_Arena *a, String_List *list, char *fmt, ...)
+DG_SYMBOL String_Node *string_list_push_fmt(DG_Arena *a, String_List *list, char *fmt, ...)
 {
   String_Node *result = dg_arena_alloc_size(a, sizeof *result);
 
@@ -166,7 +178,7 @@ String_Node *string_list_push_fmt(DG_Arena *a, String_List *list, char *fmt, ...
   return string_list_push_node(list, result);
 }
 
-String_Node *string_list_push_string8(DG_Arena *a, String_List *list, String8 str)
+DG_SYMBOL String_Node *string_list_push_string8(DG_Arena *a, String_List *list, String8 str)
 {
   String_Node *result = dg_arena_alloc_size(a, sizeof *result);
   result->data = str;
@@ -175,16 +187,7 @@ String_Node *string_list_push_string8(DG_Arena *a, String_List *list, String8 st
   return string_list_push_node(list, result);
 }
 
-usize cstring_len(char *str)
-{
-  char *ptr = str;
-  for (; ptr != 0; ptr++){
-    // NOTE: will this be optimized away?
-  }
-  return (usize)(ptr - str);
-}
-
-String_Node *string_list_push_ncstring(DG_Arena *a, String_List *list, char *str, u32 length)
+DG_SYMBOL String_Node *string_list_push_ncstring(DG_Arena *a, String_List *list, char *str, u32 length)
 {
   String_Node *node = dg_arena_alloc_size(a, sizeof *node);
   node->data = string8(str, length);
@@ -192,25 +195,24 @@ String_Node *string_list_push_ncstring(DG_Arena *a, String_List *list, char *str
   return string_list_push_node(list, node);
 }
 
-String_Node *string_list_push_cstring(DG_Arena *a, String_List *list, char *str)
+DG_SYMBOL String_Node *string_list_push_cstring(DG_Arena *a, String_List *list, char *str)
 {
-  return string_list_push_ncstring(a, list, str, cstring_len(str));
+  return string_list_push_ncstring(a, list, str, DG_STRLEN(str));
 }
 
-#define string_list_push_string_literal(a, list, str) string_list_push_ncstring(a, list, ensure_string_literal(str), sizeof str);
-
-DG_SYMBOL String_List string8_split_on_char(DG_Arena *a, String8 str, char c)
+DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *a, String8 str, char c, struct string8_split_opt *params)
 {
   String_List result = {0};
 
-  b32 keep_empties = false;
+  b32 keep_empties = params->flags | STR_SPLIT_KEEP_EMPTIES;
 
   i32 substr_start = 0;
   i32 substr_end = 0;
+
   for (i32 i = 0; i < str.len; ++i) {
-    b32 is_split = false;
     b32 include_last = false;
 
+    b32 is_split = false;
     is_split |= str.data[i] == c;
     if (i == str.len-1) {
       if (str.data[i] != c) {
@@ -220,10 +222,10 @@ DG_SYMBOL String_List string8_split_on_char(DG_Arena *a, String8 str, char c)
     }
 
 
-    if (str.data[i] == c || i == str.len-1) {
+    if (is_split) {
       substr_end = i + include_last;
       if (substr_end - substr_start != 0 || keep_empties) {
-        String8 substr = string8_sub_slice(str, substr_start, substr_end);
+        String8 substr = string8_substring_alias(str, substr_start, substr_end);
         string_list_push_string8(a, &result, substr);
       }
       substr_start = i + 1;
@@ -254,17 +256,26 @@ DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List *list)
   return result;
 }
 
-DG_SYMBOL u32 string8_parse_u32(String8 str)
+
+DG_SYMBOL u32 string8_parse_u32_impl(String8 str, struct string8_parse_opt *params)
 {
+  if (params->base == 0) {
+    params->base = 10;
+  }
+
+  DG_ASSERT(params->base >= 2 && params->base <= 36);
   u32 result = 0;
 
   DG_Scratch scratch = dg_scratch_get(0);
-  result = atol(string8_copy_to_cstring(scratch.arena, str));
+  char *cstr = string8_copy_to_cstring(scratch.arena, str);
+  result = strtol(cstr, 0, params->base);
   dg_scratch_release(scratch);
 
   return result;
 }
 
+
+// TODO: string8_parse_params
 DG_SYMBOL i32 string8_parse_i32(String8 str)
 {
   i32 result = 0;

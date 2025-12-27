@@ -3,6 +3,9 @@
 // NOTE: temporary
 #include <stdio.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
+
+long syscall(long number, ...);
 
 char *osso_fd_read_entire_file(DG_Arena *a, FILE *file, usize *size)
 {
@@ -29,7 +32,7 @@ char *osso_fd_read_entire_file(DG_Arena *a, FILE *file, usize *size)
 }
 
 
-char *osso_path_read_entire_file(DG_Arena *a, char *path, usize *size)
+char *osso_path_cstring_read_entire_file(DG_Arena *a, char *path, usize *size)
 {
   char *result = 0;
 
@@ -43,7 +46,7 @@ char *osso_path_read_entire_file(DG_Arena *a, char *path, usize *size)
   return result;
 }
 
-void osso_path_time_get(char *path, OSSO_Time *created, OSSO_Time *modified, OSSO_Time *accessed)
+void osso_path_cstring_time_get(char *path, OSSO_Time *created, OSSO_Time *modified, OSSO_Time *accessed)
 {
   struct stat s;
   stat(path, &s);
@@ -72,13 +75,85 @@ bool osso_time_later_than(OSSO_Time a, OSSO_Time b)
   return a.time > b.time;
 }
 
-void *osso_platform_specific_lib_load(char *path);
-void osso_platform_specific_lib_unload(void *handle);
-void *osso_platform_specific_lib_function_load(void *handle, char *function_name);
-// TODO: return error
-void osso_path_file_copy(char *from_path, char *to_path);
-// TODO: return error
-void osso_path_file_delete(char *path);
+OSSO_Path osso_self_path(DG_Arena *arena)
+{
+  OSSO_Path result = {0};
+  const u32 buf_size = 1024;
+  char *buf = dg_arena_alloc_arr(arena, char, buf_size);
+  syscall(SYS_readlink, "/proc/self/exe", buf, buf_size);
 
-// =========== specific to platform ===========
+  result.path.data = (u8*) buf;
 
+  // FIXME: strlen?
+  result.path.len = CLAMP_TOP(buf_size, strlen(buf));
+
+  return result;
+}
+
+b32 osso_path_is_folder(OSSO_Path path)
+{
+  b32 result = 0;
+
+  DG_Scratch scratch = dg_scratch_get(0);
+
+  struct stat s;
+  stat(string8_copy_to_cstring(scratch.arena, path.path), &s);
+
+  const u32 is_file_flag = 0170000;
+  const u32 is_directory_flag = 0040000;
+
+  if ((s.st_mode & is_file_flag) == is_directory_flag) {
+    result = true;
+  }
+
+  dg_scratch_release(scratch);
+
+  return result;
+}
+
+OSSO_Path osso_self_folder_path(DG_Arena *arena)
+{
+  OSSO_Path result = {0};
+  DG_Scratch scratch = dg_scratch_get(arena);
+
+  OSSO_Path self_path = osso_self_path(scratch.arena);
+
+  for (u32 i = self_path.path.len - 1; i >= 0; --i) {
+    u8 c = self_path.path.data[i];
+    if (c == '/') {
+      result.path = string8_copy(arena, string8_substring_alias(self_path.path, 0, i));
+      break;
+    }
+  }
+
+  dg_scratch_release(scratch);
+  return result;
+}
+
+OSSO_Path osso_self_calling_location_path(DG_Arena *arena)
+{
+  OSSO_Path result = {0};
+  DG_Scratch scratch = dg_scratch_get(arena);
+
+  char *buf = dg_arena_alloc_arr(arena, char, 1024);
+
+  syscall(SYS_getcwd, buf, 1024);
+  result.path = string8_copy(arena, string8_from_cstring_clamped(buf, 1024));
+
+  dg_scratch_release(scratch);
+
+  return result;
+}
+
+char *osso_path_cstring(DG_Arena *arena, OSSO_Path path)
+{
+  return string8_copy_to_cstring(arena, path.path);
+}
+
+char *osso_path_ncstring(DG_Arena *arena, OSSO_Path path, u32 *length)
+{
+  if (length != NULL) {
+    *length = path.path.len;
+  }
+  return string8_copy_to_cstring(arena, path.path);
+}
