@@ -200,11 +200,16 @@ DG_SYMBOL String_Node *string_list_push_cstring(DG_Arena *a, String_List *list, 
   return string_list_push_ncstring(a, list, str, DG_STRLEN(str));
 }
 
-DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *a, String8 str, char c, struct string8_split_opt *params)
+DG_SYMBOL String_List string8_split_on_ncstring_pro(
+  DG_Arena *a,
+  String8 str,
+  char *split_chars,
+  u32 split_chars_count,
+  u8 flags)
 {
   String_List result = {0};
 
-  b32 keep_empties = params->flags | STR_SPLIT_KEEP_EMPTIES;
+  b32 keep_empties = flags | STR_SPLIT_KEEP_EMPTIES;
 
   i32 substr_start = 0;
   i32 substr_end = 0;
@@ -213,12 +218,15 @@ DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *a, String8 str, char 
     b32 include_last = false;
 
     b32 is_split = false;
-    is_split |= str.data[i] == c;
-    if (i == str.len-1) {
-      if (str.data[i] != c) {
-        include_last = true;
+    for (u32 split_chars_idx = 0; split_chars_idx < split_chars_count; ++split_chars_idx) {
+      char c = split_chars[split_chars_idx];
+      is_split |= str.data[i] == c;
+      if (i == str.len-1) {
+        if (str.data[i] != c) {
+          include_last = true;
+        }
+        is_split = true;
       }
-      is_split = true;
     }
 
 
@@ -234,6 +242,31 @@ DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *a, String8 str, char 
 
   return result;
 }
+
+DG_SYMBOL String_List string8_split_on_string8_impl(
+  DG_Arena *a,
+  String8 str,
+  String8 split_str,
+  struct string8_split_opt *params)
+{
+  return string8_split_on_ncstring_pro(a, str, (char *) split_str.data, split_str.len, params->flags);
+}
+
+DG_SYMBOL String_List string8_split_on_ncstring_impl(
+  DG_Arena *a,
+  String8 str,
+  char *split_chars,
+  u32 split_chars_count,
+  struct string8_split_opt *params)
+{
+  return string8_split_on_ncstring_pro(a, str, split_chars, split_chars_count, params->flags);
+}
+
+DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *a, String8 str, char c, struct string8_split_opt *params)
+{
+  return string8_split_on_ncstring_pro(a, str, &c, 1, params->flags);
+}
+
 
 DG_SYMBOL String_List string8_split_lines(DG_Arena *a, String8 str)
 {
