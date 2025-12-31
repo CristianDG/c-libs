@@ -36,7 +36,7 @@ void osso_path_cstring_file_delete(char *path);
 bool osso_time_later_than(OSSO_Time a, OSSO_Time b);
 
 
-// TODO: make platform independent...?
+// FIXME: make platform independent...?
 void *osso_platform_specific_lib_function_load(void *handle, char *function_name);
 
 #endif

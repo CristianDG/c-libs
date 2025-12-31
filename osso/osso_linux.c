@@ -67,14 +67,6 @@ void osso_path_cstring_time_get(char *path, OSSO_Time *created, OSSO_Time *modif
 
 }
 
-// IMPORTANT: osso_time_diff!
-// TODO: osso_time_earlier_than?
-// TODO: osso_time_later_than?
-bool osso_time_later_than(OSSO_Time a, OSSO_Time b)
-{
-  return a.time > b.time;
-}
-
 OSSO_Path osso_self_path(DG_Arena *arena)
 {
   OSSO_Path result = {0};
@@ -145,15 +137,3 @@ OSSO_Path osso_self_calling_location_path(DG_Arena *arena)
   return result;
 }
 
-char *osso_path_cstring(DG_Arena *arena, OSSO_Path path)
-{
-  return string8_copy_to_cstring(arena, path.path);
-}
-
-char *osso_path_ncstring(DG_Arena *arena, OSSO_Path path, u32 *length)
-{
-  if (length != NULL) {
-    *length = path.path.len;
-  }
-  return string8_copy_to_cstring(arena, path.path);
-}
