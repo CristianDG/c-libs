@@ -276,15 +276,14 @@ DG_SYMBOL String_List string8_split_lines(DG_Arena *a, String8 str)
   return string8_split_on_string_literal(a, str, "\r\n");
 }
 
-
-DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List *list)
+DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List list)
 {
   String_Array result;
-  result.len   = list->node_count;
+  result.len   = list.node_count;
   result.data = dg_arena_alloc_size(a, sizeof(String8) * result.len);
 
   i32 idx = 0;
-  for(String_Node *n = list->first; n != 0; n = n->next, idx += 1)
+  for(String_Node *n = list.first; n != 0; n = n->next, idx += 1)
   {
     result.data[idx] = n->data;
   }

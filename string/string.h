@@ -67,7 +67,7 @@ DG_SYMBOL String_Node *string_list_push_ncstring(DG_Arena *a, String_List *list,
 DG_SYMBOL String_Node *string_list_push_cstring(DG_Arena *a, String_List *list, char *str);
 #define                string_list_push_string_literal(a, list, str) string_list_push_ncstring(a, list, ensure_string_literal(str), sizeof str)
 
-DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List *list);
+DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List list);
 
 struct string8_parse_opt {
   u8 base;
