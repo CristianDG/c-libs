@@ -60,6 +60,9 @@ DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *arena, String8 str, c
 DG_SYMBOL String8 string_list_to_string8(DG_Arena *a, String_List *list);
 DG_SYMBOL char*   string_list_to_cstring(DG_Arena *a, String_List *list);
 
+// FIXME: string_list_to_array está fora do padrão dos outros string_list_to_X
+DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List list);
+
 DG_SYMBOL String_Node *string_list_push_node(String_List *list, String_Node *node);
 DG_SYMBOL String_Node *string_list_push_fmt(DG_Arena *a, String_List *list, char *fmt, ...);
 DG_SYMBOL String_Node *string_list_push_string8(DG_Arena *a, String_List *list, String8 str);
@@ -67,7 +70,6 @@ DG_SYMBOL String_Node *string_list_push_ncstring(DG_Arena *a, String_List *list,
 DG_SYMBOL String_Node *string_list_push_cstring(DG_Arena *a, String_List *list, char *str);
 #define                string_list_push_string_literal(a, list, str) string_list_push_ncstring(a, list, ensure_string_literal(str), sizeof str)
 
-DG_SYMBOL String_Array string_list_to_array(DG_Arena *a, String_List list);
 
 struct string8_parse_opt {
   u8 base;

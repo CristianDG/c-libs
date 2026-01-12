@@ -30,13 +30,18 @@ internal void dg_dynamic_array_grow(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32
   DG_MEMCPY(&replica, arr, sizeof(replica));
 
   if (!replica.data) {
-    // TODO: default capacity as parameter
+    // TODO: default capacity as parameter (...?)
     replica.cap = 8;
     replica.data = dg_arena_alloc_size(a, 2 * item_size * replica.cap);
   } else {
-    // TODO: if the last allocation was this dynamic array, does not need to copy the data and change the pointer
-    replica.data = dg_arena_alloc_size(a, 2 * item_size * replica.cap);
-    DG_MEMCPY(replica.data, arr->data, arr->len * item_size);
+    usize maybe_arena_pos = a->base_pos - (uptr)(replica.data + replica.cap * item_size);
+    if (maybe_arena_pos == a->pos) {
+      // TODO: if the last allocation was this dynamic array, does not need to copy the data nor change the pointer
+      dg_arena_alloc_size(a, item_size * replica.cap);
+    } else {
+      replica.data = dg_arena_alloc_size(a, 2 * item_size * replica.cap);
+      DG_MEMCPY(replica.data, arr->data, arr->len * item_size);
+    }
   }
   replica.cap *= 2;
   DG_MEMCPY(arr, &replica, sizeof(replica));
@@ -138,19 +143,19 @@ DG_SYMBOL void dg_slice_set(_DG_Any_Slice *arr, i32 index, void *value, u32 item
 
 }
 
-DG_SYMBOL void *dg_slice_get_ptr(_DG_Any_Slice *arr, i32 index, u32 item_size)
- {
+DG_SYMBOL void *dg_slice_access_impl(_DG_Any_Slice *slice, i32 index, u32 item_size)
+{
   DG_ASSERT(index >= 0);
-  DG_ASSERT(index < arr->len);
+  DG_ASSERT(index < slice->len);
 
-  void *item_start = (void *)((uptr)arr->data + (index * item_size));
+  void *item_start = (void *)((uptr)slice->data + (index * item_size));
   return item_start;
 }
 
 DG_SYMBOL void dg_slice_get(_DG_Any_Slice *arr, i32 index, u32 item_size, void *opt_dst)
- {
+{
   DG_ASSERT(opt_dst);
-  void *item_start = dg_slice_get_ptr(arr, index, item_size);
+  void *item_start = dg_slice_access_impl(arr, index, item_size);
   if (opt_dst) {
     DG_MEMCPY(opt_dst, item_start, item_size);
   }
@@ -169,14 +174,14 @@ internal void _dg_slice_mergesort_merge(
 
     if (
       compare_fn(
-        dg_slice_get_ptr(input, first_half_idx, item_size),
-        dg_slice_get_ptr(input, second_half_idx, item_size)) <= ORDERING_EQ)
+        dg_slice_access_impl(input, first_half_idx, item_size),
+        dg_slice_access_impl(input, second_half_idx, item_size)) <= ORDERING_EQ)
     {
-      dg_slice_set(output, cursor, dg_slice_get_ptr(input, first_half_idx, item_size), item_size);
+      dg_slice_set(output, cursor, dg_slice_access_impl(input, first_half_idx, item_size), item_size);
       cursor++;
       first_half_idx++;
     } else {
-      dg_slice_set(output, cursor, dg_slice_get_ptr(input, second_half_idx, item_size), item_size);
+      dg_slice_set(output, cursor, dg_slice_access_impl(input, second_half_idx, item_size), item_size);
       cursor++;
       second_half_idx++;
     }
@@ -184,23 +189,23 @@ internal void _dg_slice_mergesort_merge(
 
   if (first_half_idx <= middle) {
     DG_MEMCPY(
-      dg_slice_get_ptr(output, cursor, item_size),
-      dg_slice_get_ptr(input, first_half_idx, item_size),
+      dg_slice_access_impl(output, cursor, item_size),
+      dg_slice_access_impl(input, first_half_idx, item_size),
       item_size * (middle - first_half_idx + 1)
     );
   }
 
   if (second_half_idx <= end) {
     DG_MEMCPY(
-      dg_slice_get_ptr(output, cursor, item_size),
-      dg_slice_get_ptr(input, second_half_idx, item_size),
+      dg_slice_access_impl(output, cursor, item_size),
+      dg_slice_access_impl(input, second_half_idx, item_size),
       item_size * (end - second_half_idx + 1)
     );
   }
 
   DG_MEMCPY(
-    dg_slice_get_ptr(input, start, item_size),
-    dg_slice_get_ptr(output, start, item_size),
+    dg_slice_access_impl(input, start, item_size),
+    dg_slice_access_impl(output, start, item_size),
     item_size * (end - start + 1)
   );
 
