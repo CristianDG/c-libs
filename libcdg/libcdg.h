@@ -287,8 +287,10 @@ typedef u8 byte;
   (void)0; \
 })
 
-#define DG_BREAKPOINT \
+#ifndef DG_BREAKPOINT
+ #define DG_BREAKPOINT \
   volatile usize GLUE(_dg_breakpoint_val_, __LINE__) = 0; GLUE(_dg_breakpoint_val_, __LINE__) += 0;
+#endif
 
 #ifndef DG_LOG_ERROR
 # include <stdio.h>
@@ -501,8 +503,15 @@ enum {
 #define DG_DYNAMIC_ARRAY_GET(arr, index) ((arr).data[(index)])
 #define DG_DYNAMIC_ARRAY_LEN(arr)        ((arr).len)
 #define DG_DYNAMIC_ARRAY_CAP(arr)        ((arr).cap)
+#define DG_DYNAMIC_ARRAY_ACCESS(arr, index) (&(arr).data[(index)])
+
+#define DG_DA_FOREACH_WITH_IDX(item_decl, idx_name, da) \
+  for (u32 idx_name = 0, item_decl = {0}; idx_name < DG_DYNAMIC_ARRAY_LEN(da); item_decl = DG_DYNAMIC_ARRAY_GET(da, idx_name), ++idx_name)
+
+#define DG_DA_FOREACH(item_decl, da) DG_DA_FOREACH_WITH_IDX(item_decl, GLUE(__idx_,__LINE__),da)
 
 #if !defined(DG_NO_ABBREVIATIONS) || !DG_NO_ABBREVIATIONS
+ #define DA_ACCESS DG_DYNAMIC_ARRAY_ACCESS
  #define DA_GET DG_DYNAMIC_ARRAY_GET
  #define DA_LEN DG_DYNAMIC_ARRAY_LEN
  #define DA_CAP DG_DYNAMIC_ARRAY_CAP

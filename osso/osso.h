@@ -20,13 +20,15 @@ typedef struct {
   String8 path;
 } OSSO_Path;
 
+char *osso_path_ncstring(DG_Arena *arena, OSSO_Path path, u32 *out_length);
+char *osso_path_cstring(DG_Arena *arena, OSSO_Path path);
 
 char *osso_fd_read_entire_file(DG_Arena *a, FILE *file, usize *size);
 char *osso_path_cstring_read_entire_file(DG_Arena *a, char *path, usize *size);
 void osso_path_cstring_time_get(char *path, OSSO_Time *created, OSSO_Time *modified, OSSO_Time *accessed);
 
 
-void osso_lib_hot_reload(OSSO_Hot_Reloaded_Library *lib, char *path, char *tmp_lib_folder, bool *ok_ptr, bool *new_ptr);
+void osso_lib_hot_reload(OSSO_Hot_Reloaded_Library *lib, char *path, char *tmp_lib_folder, bool *out_ok, bool *out_new);
 void osso_path_cstring_file_copy(char *from_path, char *to_path);
 void osso_path_cstring_file_delete(char *path);
 
