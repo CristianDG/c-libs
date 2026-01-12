@@ -321,3 +321,14 @@ DG_SYMBOL i32 string8_parse_i32(String8 str)
   return result;
 }
 
+
+DG_SYMBOL f32 string8_parse_f32(String8 str)
+{
+  f32 result = 0;
+  DG_Scratch scratch = dg_scratch_get(0);
+  result = strtof(string8_copy_to_cstring(scratch.arena, str), 0);
+  dg_scratch_release(scratch);
+
+  return result;
+}
+

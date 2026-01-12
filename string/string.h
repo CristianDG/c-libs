@@ -77,5 +77,6 @@ DG_SYMBOL u32 string8_parse_u32_impl(String8 str, struct string8_parse_opt *para
 #define       string8_parse_u32(str, ...) string8_parse_u32_impl(str, &(struct string8_parse_opt) { __VA_ARGS__ })
 
 DG_SYMBOL i32 string8_parse_i32(String8 str);
+DG_SYMBOL f32 string8_parse_f32(String8 str);
 
 #endif
