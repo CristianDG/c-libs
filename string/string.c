@@ -209,7 +209,7 @@ DG_SYMBOL String_List string8_split_on_ncstring_pro(
 {
   String_List result = {0};
 
-  b32 keep_empties = flags | STR_SPLIT_KEEP_EMPTIES;
+  b32 keep_empties = flags & STR_SPLIT_KEEP_EMPTIES;
 
   i32 substr_start = 0;
   i32 substr_end = 0;
@@ -222,10 +222,13 @@ DG_SYMBOL String_List string8_split_on_ncstring_pro(
       char c = split_chars[split_chars_idx];
       is_split |= str.data[i] == c;
       if (i == str.len-1) {
+        is_split = true;
         if (str.data[i] != c) {
           include_last = true;
+        } else {
+          include_last = false;
+          break;
         }
-        is_split = true;
       }
     }
 
@@ -270,8 +273,7 @@ DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *a, String8 str, char 
 
 DG_SYMBOL String_List string8_split_lines(DG_Arena *a, String8 str)
 {
-  // FIXME: \r\n???
-  return string8_split_on_char(a, str, '\n');
+  return string8_split_on_string_literal(a, str, "\r\n");
 }
 
 
