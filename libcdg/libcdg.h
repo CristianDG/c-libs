@@ -457,6 +457,7 @@ DG_SYMBOL DG_Temp_Arena dg_temp_arena_begin(DG_Arena *a);
 DG_SYMBOL void dg_temp_arena_end(DG_Temp_Arena tmp_mem);
 
 DG_SYMBOL void dg_arena_clear(DG_Arena *arena);
+DG_SYMBOL void dg_arena_pop_to(DG_Arena *a, usize pos);
 
 
 #define dg_arena_alloc_size_aligned(arena, size, alignment) dg_arena_alloc_impl(arena, size, alignment, __FILE__, __LINE__)
@@ -560,6 +561,10 @@ DG_SYMBOL void dg_dynamic_array_mergesort_impl(
   )
 
 
+DG_SYMBOL void dg_dynamic_array_resize_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, i32 new_cap, u32 item_size);
+#define dg_dynamic_array_resize(arena, arr, len) dg_dynamic_array_resize_impl((arena), (_DG_Any_Dynamic_Array*)(arr), (len), DG_DYNAMIC_ARRAY_ITEM_SIZE(arr));
+#define dg_dynamic_array_resize_to_len(arena, arr) dg_dynamic_array_resize((arena), (arr), (arr)->len)
+
 //
 // slices
 //
@@ -617,6 +622,9 @@ DG_SYMBOL void dg_slice_make_from_dynamic_array_impl (
     (_DG_Any_Dynamic_Array *) (source),                       \
     DG_SLICE_ITEM_SIZE(dest)                                  \
   )                                                           \
+
+DG_SYMBOL void dg_dynamic_array_as_slice_impl(_DG_Any_Dynamic_Array *arr, _DG_Any_Slice *out_slice);
+#define dg_dynamic_array_as_slice(arr, out_slice) dg_dynamic_array_as_slice_impl((_DG_Any_Dynamic_Array *)(arr), (_DG_Any_Slice *)(out_slice))
 
 //
 // Exponential Array (Xar)
