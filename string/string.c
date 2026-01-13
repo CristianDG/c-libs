@@ -200,14 +200,15 @@ DG_SYMBOL String_Node *string_list_push_cstring(DG_Arena *a, String_List *list, 
   return string_list_push_ncstring(a, list, str, DG_STRLEN(str));
 }
 
-DG_SYMBOL String_List string8_split_on_ncstring_pro(
+DG_SYMBOL String_Array string8_split_on_ncstring_pro(
   DG_Arena *a,
   String8 str,
   char *split_chars,
   u32 split_chars_count,
   u8 flags)
 {
-  String_List result = {0};
+  // String_List result = {0};
+  DG_Make_Dynamic_Array_Type(String8) result_to_alias = {0};
 
   b32 keep_empties = flags & STR_SPLIT_KEEP_EMPTIES;
 
@@ -237,16 +238,21 @@ DG_SYMBOL String_List string8_split_on_ncstring_pro(
       substr_end = i + include_last;
       if (substr_end - substr_start != 0 || keep_empties) {
         String8 substr = string8_substring_alias(str, substr_start, substr_end);
-        string_list_push_string8(a, &result, substr);
+        dg_dynamic_array_push_or_grow(a, &result_to_alias, substr);
       }
       substr_start = i + 1;
     }
   }
 
+  dg_dynamic_array_resize_to_len(a, &result_to_alias);
+
+  String_Array result = {0};
+  dg_dynamic_array_as_slice(&result_to_alias, &result);
+
   return result;
 }
 
-DG_SYMBOL String_List string8_split_on_string8_impl(
+DG_SYMBOL String_Array string8_split_on_string8_impl(
   DG_Arena *a,
   String8 str,
   String8 split_str,
@@ -255,7 +261,7 @@ DG_SYMBOL String_List string8_split_on_string8_impl(
   return string8_split_on_ncstring_pro(a, str, (char *) split_str.data, split_str.len, params->flags);
 }
 
-DG_SYMBOL String_List string8_split_on_ncstring_impl(
+DG_SYMBOL String_Array string8_split_on_ncstring_impl(
   DG_Arena *a,
   String8 str,
   char *split_chars,
@@ -265,13 +271,13 @@ DG_SYMBOL String_List string8_split_on_ncstring_impl(
   return string8_split_on_ncstring_pro(a, str, split_chars, split_chars_count, params->flags);
 }
 
-DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *a, String8 str, char c, struct string8_split_opt *params)
+DG_SYMBOL String_Array string8_split_on_char_impl(DG_Arena *a, String8 str, char c, struct string8_split_opt *params)
 {
   return string8_split_on_ncstring_pro(a, str, &c, 1, params->flags);
 }
 
 
-DG_SYMBOL String_List string8_split_lines(DG_Arena *a, String8 str)
+DG_SYMBOL String_Array string8_split_lines(DG_Arena *a, String8 str)
 {
   return string8_split_on_string_literal(a, str, "\r\n");
 }

@@ -36,7 +36,7 @@ DG_SYMBOL String8 string8_copy(DG_Arena *a, String8 str);
 DG_SYMBOL char*   string8_copy_to_cstring(DG_Arena *a, String8 str);
 DG_SYMBOL void    string8_copy_to_buffer(String8 str, char *buffer, usize buffer_size);
 
-DG_SYMBOL String_List string8_split_lines(DG_Arena *a, String8 str);
+DG_SYMBOL String_Array string8_split_lines(DG_Arena *a, String8 str);
 
 enum string8_split_flags {
   STR_SPLIT_KEEP_EMPTIES = 1 << 0,
@@ -47,13 +47,13 @@ struct string8_split_opt {
 };
 
 // FIXME: olhar essas funções {
-DG_SYMBOL String_List string8_split_on_ncstring_pro(DG_Arena *a, String8 str, char *split_chars, u32 split_chars_count, u8 flags);
-DG_SYMBOL String_List string8_split_on_ncstring_impl(DG_Arena *a, String8 str, char *split_chars, u32 split_chars_count, struct string8_split_opt *params);
+DG_SYMBOL String_Array string8_split_on_ncstring_pro(DG_Arena *a, String8 str, char *split_chars, u32 split_chars_count, u8 flags);
+DG_SYMBOL String_Array string8_split_on_ncstring_impl(DG_Arena *a, String8 str, char *split_chars, u32 split_chars_count, struct string8_split_opt *params);
 #define               string8_split_on_ncstring(arena, str, split_chars, split_chars_count, ...) string8_split_on_ncstring_impl((arena), (str), (split_chars), (split_chars_count), &(struct string8_split_opt) { __VA_ARGS__ })
 #define               string8_split_on_string_literal(arena, str, str_lit, ...) string8_split_on_ncstring_impl((arena), (str), ensure_string_literal(str_lit), DG_STRLEN(str_lit), &(struct string8_split_opt) { __VA_ARGS__ })
-DG_SYMBOL String_List string8_split_on_string8_impl(DG_Arena *a, String8 str, String8 split_str, struct string8_split_opt *params);
+DG_SYMBOL String_Array string8_split_on_string8_impl(DG_Arena *a, String8 str, String8 split_str, struct string8_split_opt *params);
 #define               string8_split_on_string8(arena, str, split_str, ...) string8_split_on_string8_impl((arena), (str), (split_str), &(struct string8_split_opt) { __VA_ARGS__ })
-DG_SYMBOL String_List string8_split_on_char_impl(DG_Arena *arena, String8 str, char c, struct string8_split_opt *params);
+DG_SYMBOL String_Array string8_split_on_char_impl(DG_Arena *arena, String8 str, char c, struct string8_split_opt *params);
 #define               string8_split_on_char(arena, str, c, ...) string8_split_on_char_impl((arena), (str), (c), &(struct string8_split_opt) { __VA_ARGS__ })
 // }
 
