@@ -1,5 +1,6 @@
 #include "libcdg.h"
 
+
 // Dynamic arrays
 
 internal inline void dg_dynamic_array_make_buffer_unchecked(_DG_Any_Dynamic_Array *arr, u32 capacity, u8 *data)
@@ -11,34 +12,37 @@ internal inline void dg_dynamic_array_make_buffer_unchecked(_DG_Any_Dynamic_Arra
 }
 
 // TODO: colocar em libcdg.h
-DG_SYMBOL void dg_dynamic_array_make_buffer_impl(u8 *data, usize data_size, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size)
+DG_SYMBOL void dg_dynamic_array_make_buffer_impl(u8 *data, usize data_size, void *arr_ptr, u32 capacity, u32 item_size)
 {
   DG_ASSERT((usize)(capacity * item_size) <= data_size);
-  dg_dynamic_array_make_buffer_unchecked(arr, capacity, data);
+  dg_dynamic_array_make_buffer_unchecked(arr_ptr, capacity, data);
 }
 
-DG_SYMBOL void dg_dynamic_array_make_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 capacity, u32 item_size)
+DG_SYMBOL void dg_dynamic_array_make_impl(DG_Arena *a, void *arr_ptr, u32 capacity, u32 item_size)
 {
   u8 *data = dg_arena_alloc_size(a, item_size * capacity);
-  dg_dynamic_array_make_buffer_unchecked(arr, capacity, data);
+  dg_dynamic_array_make_buffer_unchecked(arr_ptr, capacity, data);
 }
 
 
-internal void dg_dynamic_array_grow(DG_Arena *a, _DG_Any_Dynamic_Array *arr, u32 item_size)
+internal void dg_dynamic_array_grow(DG_Arena *a, void *arr_ptr)
 {
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
   _DG_Any_Dynamic_Array replica = {0};
   DG_MEMCPY(&replica, arr, sizeof(replica));
 
   if (!replica.data) {
-    dg_dynamic_array_make_impl(a, &replica, 8, item_size);
+    dg_dynamic_array_make_impl(a, &replica, 8, arr->item_size);
   } else {
-    dg_dynamic_array_resize_impl(a, &replica, replica.cap * 2, item_size);
+    dg_dynamic_array_resize_impl(a, &replica, replica.cap * 2);
   }
   DG_MEMCPY(arr, &replica, sizeof(replica));
 }
 
-DG_SYMBOL void dg_dynamic_array_resize_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, i32 new_cap, u32 item_size)
+DG_SYMBOL void dg_dynamic_array_resize_impl(DG_Arena *a, void *arr_ptr, i32 new_cap)
 {
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
+  u32 item_size = arr->item_size;
   usize maybe_arena_pos = a->base_pos + (uptr)(arr->cap * item_size + sizeof(DG_Arena));
   if (maybe_arena_pos == a->pos) {
     // TODO: if the last allocation was this dynamic array, does not need to copy the data nor change the pointer
@@ -55,56 +59,63 @@ DG_SYMBOL void dg_dynamic_array_resize_impl(DG_Arena *a, _DG_Any_Dynamic_Array *
   arr->cap = new_cap;
 }
 
-DG_SYMBOL void dg_dynamic_array_pop_impl(_DG_Any_Dynamic_Array *arr, void *dst, u32 item_size)
+DG_SYMBOL void dg_dynamic_array_pop_impl(void *arr_ptr, void *dst)
 {
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
   DG_ASSERT(arr->len > 0);
   if (dst) {
-    void *last_item_start = (void *)((uptr)arr->data + ((arr->len - 1) * item_size));
-    DG_MEMCPY(dst, last_item_start, item_size);
+    void *last_item_start = (void *)((uptr)arr->data + ((arr->len - 1) * arr->item_size));
+    DG_MEMCPY(dst, last_item_start, arr->item_size);
   }
   arr->len -= 1;
 }
 
-DG_SYMBOL void dg_dynamic_array_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size)
+DG_SYMBOL void dg_dynamic_array_push_impl(void *arr_ptr, void *src)
 {
-  void *dst = (void *)(((uptr)arr->data) + (arr->len * item_size));
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
+  void *dst = (void *)(((uptr)arr->data) + (arr->len * arr->item_size));
   arr->len++;
   // NOTE: remover?
-  DG_MEMZERO_SIZE(dst, item_size);
-  DG_MEMCPY(dst, src, item_size);
+  DG_MEMZERO_SIZE(dst, arr->item_size);
+  DG_MEMCPY(dst, src, arr->item_size);
 }
 
-DG_SYMBOL bool dg_dynamic_array_try_push_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size)
+DG_SYMBOL bool dg_dynamic_array_try_push_impl(void *arr_ptr, void *src)
 {
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
   if (arr->len < arr->cap) {
-    dg_dynamic_array_push_impl(arr, src, item_size);
+    dg_dynamic_array_push_impl(arr, src);
     return true;
   }
 
   return false;
 }
 
-DG_SYMBOL void dg_dynamic_array_push_or_error_impl(_DG_Any_Dynamic_Array *arr, void *src, u32 item_size)
+DG_SYMBOL void dg_dynamic_array_push_or_error_impl(void *arr_ptr, void *src)
 {
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
   DG_ASSERT(arr->len < arr->cap);
-  dg_dynamic_array_push_impl(arr, src, item_size);
+  dg_dynamic_array_push_impl(arr, src);
 }
 
-DG_SYMBOL void dg_dynamic_array_push_or_grow_impl(DG_Arena *a, _DG_Any_Dynamic_Array *arr, void *src, u32 item_size)
+DG_SYMBOL void dg_dynamic_array_push_or_grow_impl(DG_Arena *a, void *arr_ptr, void *src)
 {
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
   if (arr->len >= arr->cap) {
-    dg_dynamic_array_grow(a, arr, item_size);
+    dg_dynamic_array_grow(a, arr);
   }
-  dg_dynamic_array_push_impl(arr, src, item_size);
+  dg_dynamic_array_push_impl(arr, src);
 }
 
-DG_SYMBOL void dg_dynamic_array_clear_impl(_DG_Any_Dynamic_Array *arr)
+DG_SYMBOL void dg_dynamic_array_clear_impl(void *arr_ptr)
 {
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
   arr->len = 0;
 }
 
-DG_SYMBOL void dg_dynamic_array_as_slice_impl(_DG_Any_Dynamic_Array *arr, _DG_Any_Slice *out_slice)
+DG_SYMBOL void dg_dynamic_array_as_slice_impl(void *arr_ptr, _DG_Any_Slice *out_slice)
 {
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
   out_slice->len = arr->len;
   out_slice->data = arr->data;
 }
@@ -112,9 +123,10 @@ DG_SYMBOL void dg_dynamic_array_as_slice_impl(_DG_Any_Dynamic_Array *arr, _DG_An
 DG_SYMBOL void dg_slice_make_from_dynamic_array_impl (
   DG_Arena *arena,
   _DG_Any_Slice *dest,
-  _DG_Any_Dynamic_Array *source,
+  void *source_ptr,
   u32 _slice_item_size
 ) {
+  _DG_Any_Dynamic_Array *source = source_ptr;
   _DG_Any_Slice result_to_copy = {0};
   dg_dynamic_array_as_slice(source, &result_to_copy);
   dg_slice_copy_impl(arena, &result_to_copy, dest, _slice_item_size);
@@ -249,14 +261,15 @@ DG_SYMBOL void dg_slice_mergesort_impl(
 }
 
 DG_SYMBOL void dg_dynamic_array_mergesort_impl(
-  _DG_Any_Dynamic_Array *dynarr,
-  Ordering_Kind (*compare_fn)(void *, void *),
-  usize item_size)
-{
-  DG_ASSERT(dynarr);
+  void *arr_ptr,
+  Ordering_Kind (*compare_fn)(void *, void *)
+) {
+
+  _DG_Any_Dynamic_Array *arr = arr_ptr;
+  DG_ASSERT(arr);
   _DG_Any_Slice slice = {0};
-  dg_dynamic_array_as_slice(dynarr, &slice);
-  dg_slice_mergesort_impl(&slice, compare_fn, item_size);
+  dg_dynamic_array_as_slice(arr, &slice);
+  dg_slice_mergesort_impl(&slice, compare_fn, arr->item_size);
 }
 
 // NOTE: inclusive on start, exclusive on finish
