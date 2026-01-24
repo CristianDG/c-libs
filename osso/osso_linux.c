@@ -67,6 +67,8 @@ void osso_path_cstring_time_get(char *path, OSSO_Time *created, OSSO_Time *modif
 
 }
 
+// TODO: remove need for arena and allocate value
+// in read-only memory
 OSSO_Path osso_self_path(DG_Arena *arena)
 {
   OSSO_Path result = {0};
